@@ -2,7 +2,7 @@ FROM node:22
 
 # Keep it as development container
 ENV NODE_ENV=development
-WORKDIR /app
+WORKDIR /api/app
 
 # Copy package files (glob works in shell form)
 COPY package*.json ./
