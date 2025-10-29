@@ -3,18 +3,16 @@ FROM node:22-alpine
 WORKDIR /api/app
 
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install    # install all deps including dev (for build)
 
 COPY . .
 
-# Build client + server (if vite is used)
-RUN npm run build
+RUN npm run build  # build client/server
 
-# Set environment
+# Now prune dev dependencies to reduce image size
+RUN npm prune --omit=dev
+
 ENV NODE_ENV=production
-
-# Expose container port (Back4App will map this dynamically)
 EXPOSE 8000
 
-# Start the production server
 CMD ["npm", "start"]
