@@ -7,7 +7,7 @@ import { setupVite, serveStatic } from "./vite";
 
 // No external DB required for local development (in-memory storage)
 
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+const port = process.env.PORT || 8000;
 
 async function main() {
   const app = express();
