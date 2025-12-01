@@ -1,0 +1,28 @@
+
+# ENV FILES
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+
+# BUILD / DIST
+dist/
+build/
+
+# NODE DEPENDENCIES
+node_modules/
+
+# LOGS
+*.log
+logs/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Misc
+server/public
+vite.config.ts.*
+*.tar.gz
+

@@ -1,0 +1,22 @@
+# Prevent committing secrets and enforce text settings
+
+# Treat all .env and secret files as binary to prevent accidental diff/view
+*.env* filter=secrets text eol=lf
+*.key filter=secrets text eol=lf
+*.pem filter=secrets text eol=lf
+*.crt filter=secrets text eol=lf
+*.p12 filter=secrets text eol=lf
+*.pfx filter=secrets text eol=lf
+*.cert filter=secrets text eol=lf
+
+# Mark log and sensitive files as binary
+*.log binary
+
+# Enforce LF line endings for all text files
+* text=auto eol=lf
+
+# Optionally, you can add a secrets filter in your .git/config:
+# [filter "secrets"]
+#   clean = "git secret hide --force --quiet"
+#   smudge = cat
+#   required = true
