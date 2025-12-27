@@ -31,6 +31,20 @@ router.post("/", async (req, res) => {
     });
 
     await c.save();
+
+    // Broadcast contact creation so admin dashboards can update in real-time
+    try {
+      const wsServer = (global as any).__wsServer;
+      if (wsServer) {
+        wsServer.broadcast({
+          type: "CONTACT_CREATED",
+          data: { contactId: c._id, subject: c.subject, email: c.email },
+        });
+      }
+    } catch (wsErr) {
+      debug("Failed to broadcast CONTACT_CREATED", wsErr);
+    }
+
     res.status(201).json({ success: true, message: "Submitted" });
   } catch (err: any) {
     console.error("Error submitting contact message:", err);

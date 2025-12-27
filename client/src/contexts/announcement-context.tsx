@@ -132,6 +132,63 @@ export function AnnouncementProvider({
             }
           }
 
+          // Admin-facing events: new query or contact created
+          if (msg.type === "QUERY_CREATED") {
+            try {
+              const ev = new CustomEvent("query:created", { detail: msg.data });
+              window.dispatchEvent(ev);
+              // Also show a lightweight admin toast
+              if ((user as any)?.role === "admin") {
+                toast({
+                  title: "New support query",
+                  description: msg.data?.subject || "A user submitted a query",
+                });
+              }
+            } catch (e) {
+              debug("Failed to emit query:created event", e);
+            }
+          }
+
+          if (msg.type === "CONTACT_CREATED") {
+            try {
+              const ev = new CustomEvent("contact:created", {
+                detail: msg.data,
+              });
+              window.dispatchEvent(ev);
+              if ((user as any)?.role === "admin") {
+                toast({
+                  title: "New contact message",
+                  description:
+                    msg.data?.subject || `From ${msg.data?.email || "someone"}`,
+                });
+              }
+            } catch (e) {
+              debug("Failed to emit contact:created event", e);
+            }
+          }
+
+          // New query created (admin-facing): emit event so admin pages can refresh
+          if (msg.type === "QUERY_CREATED") {
+            try {
+              const ev = new CustomEvent("query:created", { detail: msg.data });
+              window.dispatchEvent(ev);
+            } catch (e) {
+              debug("Failed to emit query:created event", e);
+            }
+          }
+
+          // New contact message (admin-facing)
+          if (msg.type === "CONTACT_CREATED") {
+            try {
+              const ev = new CustomEvent("contact:created", {
+                detail: msg.data,
+              });
+              window.dispatchEvent(ev);
+            } catch (e) {
+              debug("Failed to emit contact:created event", e);
+            }
+          }
+
           // Account status change (e.g., admin reactivated or deactivated a user)
           if (msg.type === "ACCOUNT_STATUS_CHANGED") {
             const targetUser = msg.data?.userId;

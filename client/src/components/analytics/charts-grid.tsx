@@ -289,9 +289,7 @@ export default function ChartsGrid() {
                       outerRadius={80}
                       innerRadius={40}
                       dataKey="value"
-                      label={({ name, percent }) =>
-                        `${name} ${(percent * 100).toFixed(0)}%`
-                      }
+                      label={({ name, value }) => `${name} ${value}`}
                       labelLine={{
                         stroke: "hsl(215, 13%, 75%)",
                         strokeWidth: 1,

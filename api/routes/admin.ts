@@ -469,7 +469,7 @@ router.patch(
   }
 );
 
-// ADMIN: Clear storage for a specific user (deletes File and FileData documents)
+// ADMIN: Clear storage for a specific user (deletes File, FileData and upload sessions)
 router.post(
   "/storage/clear/:userId",
   isAdmin,
@@ -483,10 +483,47 @@ router.post(
       const fdResult = await FileData.deleteMany({ file_id: { $in: fileIds } });
       const fResult = await File.deleteMany({ user_id: userId });
 
+      // Delete upload sessions (these count towards storage usage)
+      const uResult = await UploadSession.deleteMany({ user_id: userId });
+
+      // Cleanup local attachment files referenced in the user's queries (do NOT delete the query documents themselves)
+      let deletedAttachmentFiles = 0;
+      try {
+        const userQueries = await Query.find({ user_id: userId }).lean();
+        const uploadsDir = path.resolve(__dirname, "..", "uploads");
+        for (const q of userQueries) {
+          const messages = (q as any).messages || [];
+          for (const m of messages) {
+            const attachments = m.attachments || [];
+            for (const a of attachments) {
+              if (!a || !a.url) continue;
+              try {
+                // Only handle local uploads served under /uploads/
+                const url = String(a.url);
+                const parsed = url.split("/");
+                const fileName = parsed[parsed.length - 1];
+                if (!fileName) continue;
+                const filePath = path.join(uploadsDir, fileName);
+                if (fs.existsSync(filePath)) {
+                  await fs.promises.unlink(filePath);
+                  deletedAttachmentFiles++;
+                }
+              } catch (fileErr) {
+                error("Failed to delete attachment file:", fileErr);
+              }
+            }
+          }
+        }
+      } catch (fsErr) {
+        error("Failed to cleanup attachment files for user:", fsErr);
+      }
+
       res.json({
         message: "User storage cleared",
         deletedFiles: fResult.deletedCount,
         deletedFileData: fdResult.deletedCount,
+        deletedUploadSessions: uResult.deletedCount,
+        deletedAttachmentFiles,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -494,7 +531,7 @@ router.post(
   }
 );
 
-// ADMIN: Clear storage for ALL users
+// ADMIN: Clear storage for ALL users (deletes File, FileData, UploadSessions and uploaded files)
 router.post(
   "/storage/clearAll",
   isAdmin,
@@ -506,10 +543,39 @@ router.post(
         file_id: { $in: allFileIds },
       });
       const fResult = await File.deleteMany({});
+
+      // Delete all upload sessions (storage accounting)
+      const uResult = await UploadSession.deleteMany({});
+
+      // Remove all files in the uploads directory (attachments)
+      let deletedFilesCount = 0;
+      try {
+        const uploadsDir = path.resolve(__dirname, "..", "uploads");
+        if (fs.existsSync(uploadsDir)) {
+          const files = await fs.promises.readdir(uploadsDir);
+          for (const fileName of files) {
+            try {
+              const p = path.join(uploadsDir, fileName);
+              const stat = await fs.promises.stat(p);
+              if (stat.isFile()) {
+                await fs.promises.unlink(p);
+                deletedFilesCount++;
+              }
+            } catch (err) {
+              error("Failed to delete upload file:", err);
+            }
+          }
+        }
+      } catch (fsErr) {
+        error("Failed to cleanup uploads directory:", fsErr);
+      }
+
       res.json({
         message: "All storage cleared",
         deletedFiles: fResult.deletedCount,
         deletedFileData: fdResult.deletedCount,
+        deletedUploadSessions: uResult.deletedCount,
+        deletedUploadFilesOnDisk: deletedFilesCount,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -859,7 +925,24 @@ router.post(
           broadcast: false,
         });
         await announcement.save();
-        // Insert lightweight references into admin users (optional)
+        // Broadcast a lightweight event to connected admin clients so dashboards update in real-time
+        try {
+          const wsServer = (global as any).__wsServer;
+          if (wsServer) {
+            const broadcastData = {
+              type: "QUERY_CREATED",
+              data: {
+                queryId: query._id,
+                subject: query.subject,
+                userId: (req as any).user._id,
+              },
+            };
+            const sentCount = wsServer.broadcast(broadcastData);
+            debug(`Broadcasted QUERY_CREATED`, { sentCount });
+          }
+        } catch (wsErr) {
+          error("Failed to broadcast QUERY_CREATED:", wsErr);
+        }
       } catch (notifyErr) {
         error("Failed to create admin notification for query:", notifyErr);
       }
@@ -1235,34 +1318,124 @@ router.get("/dashboard/stats", isAdmin, async (req: Request, res: Response) => {
   try {
     const totalUsers = await User.countDocuments({ role: "member" });
     const totalAdmins = await User.countDocuments({ role: "admin" });
+
+    // Queries
+    const totalQueries = await Query.countDocuments();
     const openQueries = await Query.countDocuments({ status: "open" });
+    // New queries in the last 24 hours
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const newQueries = await Query.countDocuments({
+      created_at: { $gte: since },
+    });
+
+    // Reviews (kept for backwards compatibility but we'll surface reactivations elsewhere)
     const pendingReviews = await Review.countDocuments({ status: "pending" });
     const approvedReviews = await Review.countDocuments({ status: "approved" });
 
-    const users = await User.find();
-    const files = await File.find();
-    const totalStorageUsed = files.reduce(
-      (sum, file) => sum + (file.size || 0),
-      0
-    );
-    const totalQuota = users.length * 10 * 1024 * 1024 * 1024; // 10GB per user
+    // Storage: use UploadSession aggregation (consistent with storage UI)
+    const uploadAgg = await UploadSession.aggregate([
+      {
+        $group: { _id: null, totalSize: { $sum: "$size" }, count: { $sum: 1 } },
+      },
+    ]);
+    const totalStorageBytes = uploadAgg?.[0]?.totalSize || 0;
+    const totalUploadedFiles = uploadAgg?.[0]?.count || 0;
+
+    // Contacts: total and pending
+    const contactTotal = await Contact.countDocuments();
+    const contactPending = await Contact.countDocuments({ responded: false });
+
+    // Reactivation requests: filter contact messages mentioning reactivation
+    const reactivationFilter = {
+      $or: [{ subject: /reactivation/i }, { message: /reactivate/i }],
+    };
+    const reactivationTotal = await Contact.countDocuments(reactivationFilter);
+    const reactivationPending = await Contact.countDocuments({
+      ...reactivationFilter,
+      responded: false,
+    });
+
+    // Average response time (between query.created_at and first admin message)
+    const queriesWithReplies = await Query.find({
+      "messages.author": "admin",
+    }).lean();
+    let totalResponseMillis = 0;
+    let responseCount = 0;
+    for (const q of queriesWithReplies) {
+      const createdAt = q.created_at ? new Date(q.created_at).getTime() : null;
+      if (!createdAt) continue;
+      const adminMsg = (q.messages || []).find(
+        (m: any) => m.author === "admin" && m.created_at
+      );
+      if (!adminMsg || !adminMsg.created_at) continue;
+      const adminAt = new Date(adminMsg.created_at).getTime();
+      if (adminAt > createdAt) {
+        totalResponseMillis += adminAt - createdAt;
+        responseCount++;
+      }
+    }
+    const avgResponseMillis =
+      responseCount > 0 ? totalResponseMillis / responseCount : 0;
+    const avgResponseMinutes = avgResponseMillis
+      ? Math.round(avgResponseMillis / 60000)
+      : 0;
+
+    // Debug: log computed stats for verification
+    debug("[/dashboard/stats] computed", {
+      totalUsers,
+      totalAdmins,
+      totalQueries,
+      newQueries,
+      openQueries,
+      totalStorageBytes,
+      totalUploadedFiles,
+      contactTotal,
+      contactPending,
+      reactivationTotal,
+      reactivationPending,
+      avgResponseMinutes,
+    });
 
     res.json({
       totalUsers,
       totalAdmins,
+      // Queries
+      totalQueries,
+      newQueries,
       openQueries,
+      // Reviews (legacy)
       pendingReviews,
       approvedReviews,
+      // Storage
       totalStorageUsed: parseFloat(
-        (totalStorageUsed / (1024 * 1024 * 1024)).toFixed(2)
+        (totalStorageBytes / (1024 * 1024 * 1024)).toFixed(2)
       ),
-      totalQuota: parseFloat((totalQuota / (1024 * 1024 * 1024)).toFixed(2)),
-      storagePercentage: Math.round((totalStorageUsed / totalQuota) * 100),
+      totalUploadedFiles,
+      totalQuota: parseFloat(
+        (
+          ((totalUsers + totalAdmins) * 10 * 1024 * 1024 * 1024) /
+          (1024 * 1024 * 1024)
+        ).toFixed(2)
+      ),
+      storagePercentage: Math.round(
+        (totalStorageBytes /
+          ((totalUsers + totalAdmins) * 10 * 1024 * 1024 * 1024)) *
+          100
+      ),
       averageStoragePerUser: parseFloat(
-        (totalStorageUsed / (users.length || 1) / (1024 * 1024 * 1024)).toFixed(
-          2
-        )
+        (
+          totalStorageBytes /
+          (totalUsers + totalAdmins || 1) /
+          (1024 * 1024 * 1024)
+        ).toFixed(2)
       ),
+      // Contacts & reactivations
+      contactTotal,
+      contactPending,
+      reactivationTotal,
+      reactivationPending,
+      // Avg response time in minutes
+      avgQueryResponseMinutes: avgResponseMinutes,
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
