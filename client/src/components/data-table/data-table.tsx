@@ -18,6 +18,7 @@ import { filterTravelData, sortTravelData } from "@/lib/data-processing";
 import type { TravelData } from "@shared/schema";
 import { FlightStatus } from "@shared/types";
 import { cn, getFlightStatus } from "@/lib/utils";
+import { error } from "@/lib/logger";
 
 export default function DataTable() {
   const { travelData } = useTravelData();
@@ -89,8 +90,8 @@ export default function DataTable() {
           flying_status: flightStatus, // Update both fields for consistency
         },
       });
-    } catch (error) {
-      console.error("Failed to update status:", error);
+    } catch (err) {
+      error("Failed to update status:", err);
     }
   };
 

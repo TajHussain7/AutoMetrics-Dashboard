@@ -34,6 +34,7 @@ AutoMetrics Travel Data Dashboard is a modern web application designed to stream
    ```
 3. **Configure environment variables:**
    - Set up your MongoDB connection and other required environment variables as described in the project documentation.
+   - Optionally set the announcements WebSocket URL for client builds using the Vite env var `VITE_ANNOUNCEMENTS_WS_URL` (defaults to `ws://localhost:8081` for local development).
 4. **Run the development server:**
    ```sh
    npm run dev

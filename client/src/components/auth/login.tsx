@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, LogIn, Mail, Lock } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/auth-context";
+import { debug, error as errorLogger } from "@/lib/logger";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ResponsiveContainer } from "@/components/ui/responsive-container";
 
@@ -32,6 +33,10 @@ export default function LoginScreen() {
     email: "",
     password: "",
   });
+  // Remember me state (persist to localStorage when true)
+  const [remember, setRemember] = useState<boolean>(
+    () => !!localStorage.getItem("user")
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,16 +44,20 @@ export default function LoginScreen() {
     setError(null);
 
     try {
-      console.debug("Attempting login with:", { email: formData.email });
-      const response = await signIn(formData.email, formData.password);
-      console.debug("Login response:", response);
+      debug("Attempting login with:", { email: formData.email });
+      const response = await signIn(
+        formData.email,
+        formData.password,
+        remember
+      );
+      debug("Login response:", response);
 
       if (response.user) {
         toast({
           title: "Login successful",
           description: "Welcome back!",
         });
-        sessionStorage.setItem("user", JSON.stringify(response.user));
+        // Persistence handled by AuthContext (localStorage if remembered, sessionStorage otherwise)
         if (response.user.role === "admin") {
           window.location.href = "/admin";
         } else {
@@ -56,11 +65,11 @@ export default function LoginScreen() {
         }
       } else {
         const errorMessage = response.error || "Login failed";
-        console.error("Login failed with error:", errorMessage);
+        errorLogger("Login failed with error:", errorMessage);
         throw new Error(errorMessage);
       }
     } catch (err) {
-      console.error("Login error:", err);
+      errorLogger("Login error:", err);
       setError(
         err instanceof Error ? err.message : "Invalid email or password"
       );
@@ -127,7 +136,7 @@ export default function LoginScreen() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="example@gmail.com"
+                      placeholder="your.email@example.com"
                       required
                       value={formData.email}
                       onChange={handleInputChange}
@@ -178,7 +187,12 @@ export default function LoginScreen() {
                 </div>
 
                 <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50/50 border border-slate-100">
-                  <Checkbox id="remember" className="rounded" />
+                  <Checkbox
+                    id="remember"
+                    className="rounded"
+                    checked={remember}
+                    onCheckedChange={(val) => setRemember(Boolean(val))}
+                  />
                   <label
                     htmlFor="remember"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600"

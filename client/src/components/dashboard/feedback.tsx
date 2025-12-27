@@ -6,6 +6,8 @@ import { ArrowUpRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Lottie from "lottie-react";
+import axios from "axios";
+import { debug } from "@/lib/logger";
 
 // Feedback/Message Lottie Animation JSON
 const feedbackAnimation = {
@@ -714,6 +716,48 @@ export default function FeedbackPrompt() {
   const [isHovered, setIsHovered] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
+  const [reviewers, setReviewers] = useState<
+    Array<{ name: string; avatar?: string; initials: string }>
+  >([]);
+  const [userCount, setUserCount] = useState<number | null>(null);
+
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .map((s) => s[0] || "")
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [revRes, countRes] = await Promise.all([
+          axios.get("/api/feedback/recent?limit=4"),
+          axios.get("/api/users/count"),
+        ]);
+
+        if (revRes?.data?.success) {
+          const items = revRes.data.feedback.map((f: any) => ({
+            name: f.name || "Anonymous",
+            avatar: f.avatar,
+            initials: getInitials(f.name || "A"),
+          }));
+          setReviewers(items);
+        }
+
+        if (countRes?.data?.success) {
+          setUserCount(Number(countRes.data.count) || 0);
+        }
+      } catch (err) {
+        // keep silent; fallback UI will remain
+        debug("Failed to load reviewer/user count", err);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -809,18 +853,52 @@ export default function FeedbackPrompt() {
                   {/* Trust Indicators */}
                   <div className="flex items-center gap-4 pt-2">
                     <div className="flex -space-x-2">
-                      {[...Array(4)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 border-2 border-white flex items-center justify-center text-xs font-medium text-slate-600"
-                        >
-                          {String.fromCharCode(65 + i)}
-                        </div>
-                      ))}
+                      {reviewers && reviewers.length > 0
+                        ? reviewers.map((r, i) => {
+                            const src = r.avatar
+                              ? r.avatar.startsWith("data:")
+                                ? r.avatar
+                                : `data:image/png;base64,${r.avatar}`
+                              : null;
+                            return (
+                              <div
+                                key={i}
+                                className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white overflow-hidden flex items-center justify-center text-xs font-medium text-slate-600"
+                                title={r.name}
+                              >
+                                {src ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={src}
+                                    alt={r.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-xs font-medium text-slate-600">
+                                    {r.initials}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        : [...Array(4)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 border-2 border-white flex items-center justify-center text-xs font-medium text-slate-600"
+                            >
+                              {String.fromCharCode(65 + i)}
+                            </div>
+                          ))}
                     </div>
                     <span className="text-sm text-slate-500">
                       Join{" "}
-                      <span className="font-semibold text-slate-700">500+</span>{" "}
+                      <span className="font-semibold text-slate-700">
+                        {userCount !== null
+                          ? userCount >= 500
+                            ? `${userCount}+`
+                            : "1000+"
+                          : "1000+"}
+                      </span>{" "}
                       users who shared feedback
                     </span>
                   </div>

@@ -20,6 +20,8 @@ interface TravelDataContextType {
   updateTravelDataItem: (id: string, updates: Partial<TravelData>) => void;
   removeTravelDataItem: (id: string) => void;
   addTravelDataItem: (item: TravelData) => void;
+  // Refetch current session travel data from the server
+  refetch: () => Promise<void>;
 }
 
 const TravelDataContext = createContext<TravelDataContextType | undefined>(
@@ -54,6 +56,48 @@ export function TravelDataProvider({
   }, [currentSessionId]);
 
   // Load initial data if we have a sessionId
+  // Shared fetch implementation so it can be invoked by both the
+  // initialization effect and callers via `refetch()`.
+  const fetchData = useCallback(
+    async (opts?: { signal?: AbortSignal }) => {
+      if (!currentSessionId) return;
+
+      setIsLoading(true);
+      try {
+        const page = 1;
+        const pageSize = 50;
+        const response = await fetch(
+          `/api/travel-data/${currentSessionId}?page=${page}&pageSize=${pageSize}`,
+          {
+            signal: opts?.signal,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch travel data");
+        }
+
+        const { data } = await response.json();
+
+        const normalized = Array.isArray(data)
+          ? data.map((it: any) => ({ ...(it || {}), id: it.id ?? it._id }))
+          : [];
+
+        setTravelData(normalized);
+        setError(null);
+      } catch (err) {
+        // Abort should be silent
+        if (err instanceof Error && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : "Fetch failed");
+        // Re-throw so callers (e.g., UI refresh buttons) can handle failures
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentSessionId]
+  );
+
   useEffect(() => {
     let mounted = true;
     const abortController = new AbortController();
@@ -61,44 +105,11 @@ export function TravelDataProvider({
     const loadData = async () => {
       if (!currentSessionId || travelData.length > 0) return;
 
-      setIsLoading(true);
       try {
-        // Implement pagination with a reasonable page size
-        const page = 1;
-        const pageSize = 50;
-        const response = await fetch(
-          `/api/travel-data/${currentSessionId}?page=${page}&pageSize=${pageSize}`,
-          {
-            signal: abortController.signal,
-          }
-        );
-
-        if (!mounted) return;
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch travel data");
-        }
-
-        const { data, total } = await response.json();
-
-        if (!mounted) return;
-
-        // Normalize server items to ensure `id` exists (map `_id` -> `id`)
-        const normalized = Array.isArray(data)
-          ? data.map((it: any) => ({ ...(it || {}), id: it.id ?? it._id }))
-          : [];
-
-        setTravelData(normalized);
+        await fetchData({ signal: abortController.signal });
       } catch (err) {
         if (!mounted) return;
-        // Don't set error state if it was just an abort
-        if (err instanceof Error && err.name !== "AbortError") {
-          setError(err.message);
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
+        // fetchData already sets error state; nothing else needed here
       }
     };
 
@@ -108,7 +119,12 @@ export function TravelDataProvider({
       mounted = false;
       abortController.abort();
     };
-  }, [currentSessionId, travelData.length]);
+  }, [currentSessionId, travelData.length, fetchData]);
+
+  // Expose `refetch` so callers can refresh the current session data on demand
+  const refetch = useCallback(async () => {
+    await fetchData();
+  }, [fetchData]);
 
   const updateTravelDataItem = useCallback(
     (id: string, updates: Partial<TravelData>) => {
@@ -164,6 +180,7 @@ export function TravelDataProvider({
         updateTravelDataItem,
         removeTravelDataItem,
         addTravelDataItem,
+        refetch,
       }}
     >
       {children}

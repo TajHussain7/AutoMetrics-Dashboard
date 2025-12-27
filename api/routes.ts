@@ -16,8 +16,9 @@ import { normalizeDate } from "./utils";
 import jwt from "jsonwebtoken";
 import { User } from "./models/user";
 import "./types/express.d.ts";
-import { authenticateToken } from "./middleware/auth";
+import { authenticateToken, requireActiveUser } from "./middleware/auth";
 import "dotenv/config";
+import { debug } from "./utils/logger.js";
 
 // Configure multer for file uploads with serverless-friendly settings
 const upload = multer({
@@ -592,6 +593,9 @@ import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
 import userRoutes from "./routes/users";
 import fileHistoryRouter from "./routes/file-history";
+import attachmentsRouter from "./routes/attachments";
+import feedbackRouter from "./routes/feedback"; // Added to mount feedback endpoints
+import contactRouter from "./routes/contact";
 import mongoose from "mongoose";
 
 export async function registerRoutes(app: Express) {
@@ -599,8 +603,20 @@ export async function registerRoutes(app: Express) {
   app.use("/api/auth", authRoutes);
   app.use("/api/admin", adminRoutes);
   app.use("/api/users", userRoutes);
+
+  // Mount feedback endpoints (public + admin)
+  app.use("/api/feedback", feedbackRouter);
+  debug("Mounted feedback router at /api/feedback (routes.ts)");
+
+  // Mount contact endpoints (public + admin)
+  app.use("/api/contact", contactRouter);
+  debug("Mounted contact router at /api/contact (routes.ts)");
+
   // File history endpoints (upload session history & restore)
   app.use("/api/files", fileHistoryRouter);
+  // Attachments (file uploads used by queries/messages)
+  app.use("/api/attachments", attachmentsRouter);
+  debug("Mounted attachments router at /api/attachments (routes.ts)");
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({
@@ -614,6 +630,7 @@ export async function registerRoutes(app: Express) {
   app.post(
     "/api/upload",
     authenticateToken,
+    requireActiveUser,
     (req: Request & { file?: Express.Multer.File }, res, next) => {
       upload.single("file")(req, res, (err) => {
         if (err) {

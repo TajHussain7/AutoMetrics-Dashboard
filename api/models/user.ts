@@ -20,6 +20,9 @@ export interface IUser extends mongoose.Document {
     notified: boolean;
     created_at: Date;
   }>;
+  // Email verification state
+  isVerified?: boolean;
+  emailVerifiedAt?: Date;
   // per-user storage quota in bytes
   storage_quota_bytes?: number;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -72,6 +75,14 @@ const userSchema = new mongoose.Schema<IUser>({
     type: String,
     enum: ["active", "inactive"],
     default: "active",
+  },
+  // Email verification fields
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+  emailVerifiedAt: {
+    type: Date,
   },
   // Storage quota in bytes (admin adjustable). Default: 10GB
   storage_quota_bytes: {

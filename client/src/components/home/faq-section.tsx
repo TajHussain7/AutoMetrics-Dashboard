@@ -133,8 +133,10 @@ export function FAQSection() {
           <p className="text-slate-600">
             Still have questions?{" "}
             <a
-              href="#contact"
+              href="/contact"
               className="text-blue-600 font-medium hover:text-blue-700 underline underline-offset-4 transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               Contact our support team
             </a>

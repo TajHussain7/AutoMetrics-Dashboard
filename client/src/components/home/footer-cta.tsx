@@ -3,8 +3,6 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Upload, CheckCircle2, Sparkles } from "lucide-react";
-import Lottie from "lottie-react";
-import footerAnim from "../../../public/lottie/footer.json";
 
 interface FooterCTAProps {
   onGetStarted: () => void;
@@ -21,7 +19,7 @@ export function FooterCTA({ onGetStarted, onTryDemo }: FooterCTAProps) {
   ];
 
   return (
-    <section className="py-20 md:py-28 relative overflow-hidden">
+    <section className="py-10 md:py-28 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-t from-blue-600/10 via-white to-white" />
       <div
         className="absolute inset-0 opacity-30"
@@ -50,19 +48,6 @@ export function FooterCTA({ onGetStarted, onTryDemo }: FooterCTAProps) {
             <span className="text-sm font-medium text-blue-700">
               Start Your Journey
             </span>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{
-              duration: shouldReduceMotion ? 0 : 0.5,
-              delay: shouldReduceMotion ? 0 : 0.2,
-            }}
-            className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 mb-8 shadow-lg shadow-blue-500/25"
-          >
-            <Lottie animationData={footerAnim} loop autoplay />
           </motion.div>
 
           <h2 className="text-3xl md:text-5xl font-bold mb-6 text-slate-900 text-balance">

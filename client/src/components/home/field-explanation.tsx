@@ -2,7 +2,6 @@
 
 import { motion, useReducedMotion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import {
   Info,
   Calendar,

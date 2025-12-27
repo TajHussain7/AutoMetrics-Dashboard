@@ -1,11 +1,14 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { User } from "../models/user";
+import { authenticateToken, requireActiveUser } from "../middleware/auth";
+import { debug } from "../utils/logger.js";
+import { Query } from "../models/query";
 import { Announcement } from "../models/announcement";
-import { authenticateToken } from "../middleware/auth";
 
 const router = Router();
 
 // Middleware to update lastActive timestamp
+// NOTE: Do not automatically re-activate a user who has been explicitly set to 'inactive' by an admin.
 const updateLastActive = async (
   req: Request,
   res: Response,
@@ -13,10 +16,13 @@ const updateLastActive = async (
 ) => {
   if (req.user) {
     try {
-      await User.findByIdAndUpdate(req.user.id, {
-        lastActive: new Date(),
-        status: "active",
-      });
+      // Fetch current DB status so we don't overwrite an explicit inactive flag
+      const dbUser = await User.findById(req.user.id).select("status");
+      const update: any = { lastActive: new Date() };
+      if (dbUser && dbUser.status && dbUser.status !== "inactive") {
+        update.status = "active";
+      }
+      await User.findByIdAndUpdate(req.user.id, update);
     } catch (error) {
       console.error("Failed to update lastActive:", error);
     }
@@ -60,19 +66,36 @@ router.get(
         ];
       }
 
-      const announcements = await Announcement.find(queryObj)
+      // Load only announcements referenced by this user (or nothing)
+      const userDoc = await User.findById(userId).select("announcements");
+      const userAnnouncements = userDoc?.announcements || [];
+
+      if (userAnnouncements.length === 0) {
+        // No announcements for this user (fast path)
+        return res.json({ announcements: [], total: 0, page, totalPages: 1 });
+      }
+
+      const ids = userAnnouncements.map((a: any) => a.announcement);
+
+      // Restrict query to user's announcement IDs and apply optional search
+      const match: any = { _id: { $in: ids } };
+      if (search) {
+        match.$or = [
+          { title: { $regex: search, $options: "i" } },
+          { content: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      const announcements = await Announcement.find(match)
         .populate({
           path: "created_by",
           select: "fullName email",
           transform: (doc) => doc || { fullName: "System", email: "" },
         })
-
-        .sort({ created_at: -1 });
-
-      const userDoc = await User.findById(userId).select("announcements");
+        .sort({ pinned: -1, created_at: -1 });
 
       const userMap = new Map<string, any>();
-      (userDoc?.announcements || []).forEach((a: any) =>
+      (userAnnouncements || []).forEach((a: any) =>
         userMap.set(String(a.announcement), a)
       );
 
@@ -82,6 +105,9 @@ router.get(
           _id: a._id,
           title: a.title,
           content: a.content,
+          attachments: a.attachments || [],
+          pinned: Boolean(a.pinned || false),
+          pinned_at: a.pinned_at || null,
           created_at: a.created_at,
           created_by: a.created_by,
           read: readEntry ? Boolean(readEntry.read) : false,
@@ -108,6 +134,209 @@ router.get(
   }
 );
 
+// User: List my queries
+router.get(
+  "/queries/me",
+  authenticateToken,
+  updateLastActive,
+  async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user._id || user.id;
+      debug(`[GET /queries/me] userId=${userId}`);
+      const queries = await Query.find({ user_id: userId }).sort({
+        created_at: -1,
+      });
+      debug(
+        `[GET /queries/me] returning ${queries.length} queries for user=${userId}`
+      );
+      res.json({ queries });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+// User: Get a single query (owner only)
+router.get(
+  "/queries/:id",
+  authenticateToken,
+  updateLastActive,
+  async (req, res) => {
+    try {
+      const user = req.user as any;
+      const q = await Query.findById(req.params.id).populate(
+        "user_id",
+        "fullName email"
+      );
+      if (!q) return res.status(404).json({ message: "Query not found" });
+
+      // Proper MongoDB ObjectId comparison (handles populated doc or raw ObjectId)
+      const queryUserId = String((q.user_id as any)?._id ?? q.user_id);
+      const currentUserId = String(user._id);
+
+      if (queryUserId !== currentUserId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      res.json(q);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+// User: Add a follow-up message to a query
+router.post(
+  "/queries/:id/messages",
+  authenticateToken,
+  requireActiveUser,
+  updateLastActive,
+  async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { message, attachments } = req.body;
+      if (!message || !message.trim()) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      const q = await Query.findById(req.params.id);
+      if (!q) return res.status(404).json({ message: "Query not found" });
+
+      // Proper MongoDB ObjectId comparison
+      if (String(q.user_id) !== String(user._id)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      q.messages = q.messages || [];
+      q.messages.push({
+        author: "user",
+        message,
+        attachments: Array.isArray(attachments) ? attachments : [],
+        created_at: new Date(),
+      } as any);
+
+      // If closed previously, reopen
+      if (q.status === "closed") q.status = "open";
+
+      await q.save();
+
+      // Optionally notify admins
+      try {
+        const announcement = new Announcement({
+          title: `Updated support query: ${q.subject}`,
+          content: `${user.fullName || "A user"} added a follow-up to query ${
+            q.subject
+          }`,
+          created_by: user._id,
+          // Internal: do not broadcast to all users
+          recipients: [],
+          broadcast: false,
+        });
+        await announcement.save();
+      } catch (err) {
+        console.error("Failed to notify admins about query follow-up", err);
+      }
+
+      res.json(q);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+// User: React to a message (like/dislike)
+router.post(
+  "/queries/:id/messages/:messageId/reactions",
+  authenticateToken,
+  updateLastActive,
+  async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { type } = req.body;
+      if (!type || !["like", "dislike"].includes(type)) {
+        return res.status(400).json({ message: "Invalid reaction type" });
+      }
+
+      const q = await Query.findById(req.params.id);
+      if (!q) return res.status(404).json({ message: "Query not found" });
+      if (String(q.user_id) !== String(user._id)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      // Find message by _id (avoid relying on DocumentArray.id which TS may not recognize)
+      const msg = (q.messages || []).find(
+        (m: any) => String((m as any)._id) === String(req.params.messageId)
+      ) as any;
+      if (!msg) return res.status(404).json({ message: "Message not found" });
+
+      msg.reactions = msg.reactions || [];
+      const existing = msg.reactions.find(
+        (r: any) => String(r.user) === String(user._id)
+      );
+      if (existing) {
+        if (existing.type === type) {
+          // toggle off
+          msg.reactions = msg.reactions.filter(
+            (r: any) => String(r.user) !== String(user._id)
+          );
+        } else {
+          existing.type = type;
+        }
+      } else {
+        msg.reactions.push({ user: user._id, type });
+      }
+
+      await q.save();
+      res.json(q);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+// User: React to a query (like/dislike)
+router.post(
+  "/queries/:id/reactions",
+  authenticateToken,
+  updateLastActive,
+  async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { type } = req.body;
+      if (!type || !["like", "dislike"].includes(type)) {
+        return res.status(400).json({ message: "Invalid reaction type" });
+      }
+
+      const q = await Query.findById(req.params.id);
+      if (!q) return res.status(404).json({ message: "Query not found" });
+      if (String(q.user_id) !== String(user._id)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      q.reactions = q.reactions || [];
+      const existing = q.reactions.find(
+        (r: any) => String(r.user) === String(user._id)
+      );
+      if (existing) {
+        if (existing.type === type) {
+          q.reactions = q.reactions.filter(
+            (r: any) => String(r.user) !== String(user._id)
+          );
+        } else {
+          existing.type = type;
+        }
+      } else {
+        q.reactions.push({ user: user._id, type });
+      }
+
+      await q.save();
+      res.json(q);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
 // Get unread announcement count (lightweight, no announcement data)
 router.get(
   "/announcements/unread-count",
@@ -121,25 +350,12 @@ router.get(
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      // Get all announcements
-      const announcements = await Announcement.find().select("_id");
-
-      // Get user's announcement read status
+      // Compute unread count directly from the user's announcements entries
       const userDoc = await User.findById(userId).select("announcements");
-
-      // Build map of read announcements
-      const readMap = new Map<string, boolean>();
-      (userDoc?.announcements || []).forEach((a: any) => {
-        readMap.set(String(a.announcement), a.read);
-      });
-
-      // Count unread
-      let unreadCount = 0;
-      announcements.forEach((a) => {
-        if (!readMap.get(String(a._id))) {
-          unreadCount++;
-        }
-      });
+      const unreadCount = (userDoc?.announcements || []).reduce(
+        (acc: number, a: any) => acc + (a.read ? 0 : 1),
+        0
+      );
 
       res.json({ unreadCount });
     } catch (error: any) {
@@ -151,6 +367,19 @@ router.get(
     }
   }
 );
+
+// Public: Return total user count (used for dashboard joining number)
+router.get("/count", async (req, res) => {
+  try {
+    const count = await User.countDocuments();
+    res.json({ success: true, count });
+  } catch (err: any) {
+    console.error("Error fetching user count:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch user count" });
+  }
+});
 
 // Mark an announcement as read for the authenticated user
 router.patch(
@@ -210,13 +439,13 @@ router.get(
   updateLastActive,
   async (req, res) => {
     try {
-      console.debug("Fetching user profile:", req.params.userId);
+      debug("Fetching user profile:", req.params.userId);
       const user = await User.findById(req.params.userId).select("-password");
       if (!user) {
-        console.debug("User not found");
+        debug("User not found");
         return res.status(404).json({ message: "User not found" });
       }
-      console.debug("User found:", user._id);
+      debug("User found:", user._id);
 
       // Format user data with consistent field names
       const userData = {
@@ -284,7 +513,7 @@ router.patch(
       }
 
       user.lastActive = new Date();
-      user.status = "active";
+      // Do not auto-reactivate users when they update profile fields
       await user.save();
 
       const userData = {
@@ -422,19 +651,36 @@ router.get(
         ];
       }
 
-      const announcements = await Announcement.find(queryObj)
+      // Load only announcements referenced by this user (or nothing)
+      const userDoc = await User.findById(userId).select("announcements");
+      const userAnnouncements = userDoc?.announcements || [];
+
+      if (userAnnouncements.length === 0) {
+        // No announcements for this user (fast path)
+        return res.json({ announcements: [], total: 0, page, totalPages: 1 });
+      }
+
+      const ids = userAnnouncements.map((a: any) => a.announcement);
+
+      // Restrict query to user's announcement IDs and apply optional search
+      const match: any = { _id: { $in: ids } };
+      if (search) {
+        match.$or = [
+          { title: { $regex: search, $options: "i" } },
+          { content: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      const announcements = await Announcement.find(match)
         .populate({
           path: "created_by",
           select: "fullName email",
           transform: (doc) => doc || { fullName: "System", email: "" },
         })
-
-        .sort({ created_at: -1 });
-
-      const userDoc = await User.findById(userId).select("announcements");
+        .sort({ pinned: -1, created_at: -1 });
 
       const userMap = new Map<string, any>();
-      (userDoc?.announcements || []).forEach((a: any) =>
+      (userAnnouncements || []).forEach((a: any) =>
         userMap.set(String(a.announcement), a)
       );
 
@@ -520,5 +766,92 @@ router.patch(
     }
   }
 );
+
+// Delete user account (with password confirmation)
+router.post("/:id/delete", authenticateToken, async (req, res) => {
+  try {
+    const user = req.user as any;
+    const userId = req.params.id;
+    if (!user || (user._id?.toString() !== userId && user.id !== userId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: "Password required" });
+    }
+    // Fetch user from DB
+    const dbUser = await User.findById(userId);
+    if (!dbUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const isMatch = await dbUser.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Password incorrect" });
+    }
+
+    // Delete all user data except feedback
+    // 1) Remove queries belonging to the user
+    await Query.deleteMany({ user_id: userId });
+
+    // 2) Delete announcement documents that were created by this user
+    const userAnnouncementIds = (dbUser.announcements || []).map((a: any) =>
+      String(a.announcement)
+    );
+    for (const annId of userAnnouncementIds) {
+      if (!annId) continue;
+      try {
+        const ann = await Announcement.findById(annId);
+        if (!ann) continue;
+        // If the announcement was created by the user themselves, delete it entirely
+        if (String(ann.created_by) === String(userId)) {
+          await Announcement.findByIdAndDelete(annId);
+          // Remove any leftover references to this announcement from other users
+          try {
+            await User.updateMany(
+              {},
+              { $pull: { announcements: { announcement: annId } } }
+            );
+          } catch (pullErr) {
+            console.error("Failed to cleanup announcement refs:", pullErr);
+          }
+        }
+        // If announcement was created by admin/other user, leave it in place (requirement)
+      } catch (e) {
+        console.error(`Error processing announcement ${annId}:`, e);
+      }
+    }
+
+    // 3) Remove announcements read entries from the user record (not necessary, user will be deleted) but keep for consistency
+    dbUser.announcements = [];
+    await dbUser.save();
+
+    // 4) Remove user
+    await User.findByIdAndDelete(userId);
+
+    // Invalidate session/token (if using JWT, client should delete token; if using sessions, destroy session)
+    if ((req as any).session) {
+      (req as any).session.destroy(() => {});
+    }
+    // WebSocket: If you have a ws server, close user socket here (pseudo-code)
+    if (req.app.get("wss")) {
+      const wss = req.app.get("wss");
+      if (wss && wss.clients) {
+        for (const client of wss.clients) {
+          if (client.userId === userId) {
+            client.close();
+          }
+        }
+      }
+    }
+
+    // Clear cookies (if any)
+    res.clearCookie && res.clearCookie("token");
+
+    return res.json({ message: "Account deleted" });
+  } catch (error: any) {
+    console.error("Error deleting account:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
 
 export default router;

@@ -37,6 +37,9 @@ export function getEnvVar(key: keyof EnvironmentConfig): any {
 try {
   loadEnvironmentVariables();
 } catch (error) {
-  console.error("Environment validation failed:", error);
+  // Avoid logging raw error objects that might contain secrets; provide a safe message
+  console.error(
+    "Environment validation failed; please check required environment variables."
+  );
   process.exit(1);
 }

@@ -8,6 +8,12 @@ import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import AnnouncementWebSocketServer from "./websocket.js";
+import path from "path";
+import { fileURLToPath } from "url";
+import { debug, info } from "./utils/logger.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const port = process.env.PORT || 8000;
 
@@ -32,7 +38,7 @@ async function initializeDefaultAdmin() {
     // Check if admin already exists
     const existingAdmin = await User.findOne({ email: adminEmail });
     if (existingAdmin) {
-      console.info("✅ Default admin already exists:", adminEmail);
+      info("✅ Default admin already exists:", adminEmail);
       return;
     }
 
@@ -47,7 +53,7 @@ async function initializeDefaultAdmin() {
     });
 
     await defaultAdmin.save();
-    console.info("✅ Default admin created successfully:", adminEmail);
+    info("✅ Default admin created successfully:", adminEmail);
   } catch (error) {
     console.error("❌ Error initializing default admin:", error);
   }
@@ -96,7 +102,7 @@ async function main() {
 
   // Log registered routes in development
   if (process.env.NODE_ENV !== "production") {
-    console.debug(
+    debug(
       "Registered API routes:",
       app._router.stack
         .filter((r: any) => r.route)
@@ -113,14 +119,17 @@ async function main() {
   const wsServer = new AnnouncementWebSocketServer();
 
   (global as any).__wsServer = wsServer;
-  console.info("✅ WebSocket server initialized for announcements");
+  info("✅ WebSocket server initialized for announcements");
+
+  // Serve uploaded attachment files
+  app.use("/uploads", express.static(path.resolve(__dirname, "uploads")));
 
   if (process.env.NODE_ENV !== "production") {
     // In dev, use Vite middleware so frontend HMR and backend run on same port
     await setupVite(app, server);
     server.listen(port, () => {
-      console.info(`Dev server running: http://localhost:${port}`);
-      console.debug("Environment:", {
+      info(`Dev server running`);
+      debug("Environment:", {
         NODE_ENV: process.env.NODE_ENV,
         PORT: port,
       });
@@ -129,7 +138,7 @@ async function main() {
     // In production, serve static built client
     serveStatic(app);
     server.listen(port, () => {
-      console.info(`Server running: http://localhost:${port}`);
+      info(`Server running`);
     });
   }
 }

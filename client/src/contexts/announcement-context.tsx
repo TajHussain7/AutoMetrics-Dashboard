@@ -1,5 +1,15 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { useAnnouncementPoller } from "@/hooks/use-announcement-poller";
+import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { debug, error } from "@/lib/logger";
 
 interface AnnouncementContextType {
   unreadCount: number;
@@ -17,6 +27,9 @@ export function AnnouncementProvider({
   children: React.ReactNode;
 }) {
   const [unreadCount, setUnreadCount] = useState(0);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const wsRef = useRef<WebSocket | null>(null);
 
   // The poller hook will call onUnreadCountChange when count changes
   const refreshUnreadCount = useAnnouncementPoller({
@@ -24,6 +37,147 @@ export function AnnouncementProvider({
     enabled: true,
     onUnreadCountChange: setUnreadCount,
   });
+
+  // Open a WebSocket connection for real-time announcements and query replies
+  useEffect(() => {
+    if (!user) return;
+
+    // Use a Vite-provided env var when available so deployments can configure the
+    // announcements WebSocket URL. Falls back to the local dev server.
+    const WS_URL =
+      (import.meta as any).env?.VITE_ANNOUNCEMENTS_WS_URL ??
+      "ws://localhost:8081";
+    try {
+      const ws = new WebSocket(WS_URL);
+      wsRef.current = ws;
+      ws.onopen = () => {
+        debug("Connected to announcement WebSocket");
+      };
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data as string);
+          if (!msg || !msg.type) return;
+
+          // Generic announcement created -> refresh counts
+          if (msg.type === "ANNOUNCEMENT_CREATED") {
+            // If announcement is a site-wide broadcast, show it to everyone.
+            // Otherwise, only show to the intended recipients (if provided).
+            const isBroadcast = Boolean(msg.data?.broadcast);
+            const recipients: string[] = Array.isArray(msg.data?.recipients)
+              ? msg.data.recipients.map((r: any) => String(r))
+              : [];
+            const uid =
+              (user as any).id || (user as any)._id || (user as any).userId;
+
+            if (!isBroadcast && recipients.length > 0) {
+              if (!uid) return; // cannot determine recipient
+              if (!recipients.includes(String(uid))) return; // not for this user
+            }
+
+            // For broadcasts and targeted announcements for this user, refresh
+            // the unread count and show a lightweight toast.
+            refreshUnreadCount();
+            toast({
+              title: "New announcement",
+              description: msg.data?.title || "You have a new announcement",
+            });
+            return;
+          }
+
+          // Query reply: only notify if the reply is for the current user
+          if (msg.type === "QUERY_REPLY") {
+            const targetUser = msg.data?.userId;
+            if (!targetUser) return;
+            const uid =
+              (user as any).id || (user as any)._id || (user as any).userId;
+            if (String(uid) === String(targetUser)) {
+              setUnreadCount((c) => c + 1);
+              toast({
+                title: "Reply to your support query",
+                description:
+                  msg.data?.reply?.slice(0, 140) ||
+                  "An admin replied to your query",
+              });
+              // Emit an event so pages (like My Queries) can refresh the thread
+              try {
+                const ev = new CustomEvent("query:reply", { detail: msg.data });
+                window.dispatchEvent(ev);
+              } catch (e) {
+                debug("Failed to emit query:reply event", e);
+              }
+            }
+          }
+
+          // Query deleted: notify the user and emit an event for pages to refresh
+          if (msg.type === "QUERY_DELETED") {
+            const targetUser = msg.data?.userId;
+            if (!targetUser) return;
+            const uid =
+              (user as any).id || (user as any)._id || (user as any).userId;
+            if (String(uid) === String(targetUser)) {
+              setUnreadCount((c) => c + 1);
+              toast({
+                title: "Support query removed",
+                description:
+                  "An administrator removed one of your support queries.",
+              });
+              try {
+                const ev = new CustomEvent("query:deleted", {
+                  detail: msg.data,
+                });
+                window.dispatchEvent(ev);
+              } catch (e) {
+                debug("Failed to emit query:deleted event", e);
+              }
+            }
+          }
+
+          // Account status change (e.g., admin reactivated or deactivated a user)
+          if (msg.type === "ACCOUNT_STATUS_CHANGED") {
+            const targetUser = msg.data?.userId;
+            const status = msg.data?.status;
+            if (!targetUser || !status) return;
+            const uid =
+              (user as any).id || (user as any)._id || (user as any).userId;
+            if (String(uid) !== String(targetUser)) return;
+
+            try {
+              if (status === "active") {
+                window.dispatchEvent(
+                  new CustomEvent("account-reactivated", { detail: { status } })
+                );
+              } else if (status === "inactive") {
+                window.dispatchEvent(
+                  new CustomEvent("account-deactivated", { detail: { status } })
+                );
+              }
+            } catch (e) {
+              debug("Failed to emit account status event", e);
+            }
+          }
+        } catch (err) {
+          error("Failed to parse WS message:", err);
+        }
+      };
+      ws.onclose = () => {
+        debug("Announcement WebSocket closed");
+      };
+      ws.onerror = (err) => {
+        error("Announcement WebSocket error:", err);
+      };
+
+      return () => {
+        try {
+          ws.close();
+        } catch (e) {
+          /* no-op */
+        }
+        wsRef.current = null;
+      };
+    } catch (err) {
+      error("Failed to open announcement WebSocket:", err);
+    }
+  }, [user]);
 
   return (
     <AnnouncementContext.Provider

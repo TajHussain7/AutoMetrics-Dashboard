@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FileSpreadsheet,
   Download,
@@ -30,6 +30,7 @@ import {
   saveExportHistory,
   type ExportOptions,
 } from "@/lib/export-utils";
+import { getFlightStatus } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import {
   Popover,
@@ -39,7 +40,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 
-const HISTORY_KEY = "tajmetrics_export_history";
+const HISTORY_KEY = "AutoMetrics_export_file";
 
 export default function ExportOptionsComponent() {
   const { travelData } = useTravelData();
@@ -55,6 +56,31 @@ export default function ExportOptionsComponent() {
   });
 
   const [history, setHistory] = useState(getExportHistory());
+  const [fileStart, setFileStart] = useState<string | undefined>(undefined);
+  const [fileEnd, setFileEnd] = useState<string | undefined>(undefined);
+  const [dateRangeError, setDateRangeError] = useState<string | null>(null);
+
+  // Helper: filter data by flight status
+  const getFilteredDataByStatus = () => {
+    let filtered = [...travelData];
+    if (
+      exportOptions.statusFilter &&
+      exportOptions.statusFilter !== "All Flights"
+    ) {
+      const statusMap: Record<string, string> = {
+        "Coming Only": "Coming",
+        "Gone Only": "Gone",
+        "Cancelled Only": "Cancelled",
+      };
+      const targetStatus = statusMap[exportOptions.statusFilter];
+      if (targetStatus) {
+        filtered = filtered.filter(
+          (item) => getFlightStatus(item) === targetStatus
+        );
+      }
+    }
+    return filtered;
+  };
 
   const handleExportExcel = async () => {
     if (travelData.length === 0) {
@@ -66,16 +92,28 @@ export default function ExportOptionsComponent() {
       return;
     }
 
+    const filteredData = getFilteredDataByStatus();
+    if (filteredData.length === 0) {
+      toast({
+        title: "No data to export",
+        description: `No records match the selected filter (${
+          exportOptions.statusFilter || "All Flights"
+        }).`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsExporting(true);
     try {
-      await exportToExcel(travelData, exportOptions);
+      await exportToExcel(filteredData, exportOptions);
 
       saveExportHistory({
         filename: `TajMetrics_Export_${
           new Date().toISOString().split("T")[0]
         }.xlsx`,
         type: "excel",
-        recordCount: travelData.length,
+        recordCount: filteredData.length,
       });
 
       setHistory(getExportHistory());
@@ -111,6 +149,54 @@ export default function ExportOptionsComponent() {
   const updateExportOptions = (updates: Partial<ExportOptions>) => {
     setExportOptions((prev) => ({ ...prev, ...updates }));
   };
+
+  // Compute earliest/latest date from travelData and initialize dateRange
+  useEffect(() => {
+    if (!travelData || travelData.length === 0) {
+      setFileStart(undefined);
+      setFileEnd(undefined);
+      return;
+    }
+
+    const extractDateFromRecord = (rec: any): Date | null => {
+      for (const key of Object.keys(rec)) {
+        if (/date/i.test(key) && rec[key]) {
+          const d = new Date(rec[key]);
+          if (!isNaN(d.getTime())) return d;
+        }
+      }
+      return null;
+    };
+
+    const dates: Date[] = travelData
+      .map((r: any) => extractDateFromRecord(r))
+      .filter((d: Date | null): d is Date => d !== null)
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    if (dates.length === 0) {
+      setFileStart(undefined);
+      setFileEnd(undefined);
+      return;
+    }
+
+    const min = dates[0];
+    const max = dates[dates.length - 1];
+    const minIso = min.toISOString().split("T")[0];
+    const maxIso = max.toISOString().split("T")[0];
+
+    setFileStart(minIso);
+    setFileEnd(maxIso);
+
+    // initialize export options dateRange if not set or if the data changed
+    setExportOptions((prev) => ({
+      ...prev,
+      dateRange: {
+        start: minIso,
+        end: prev.dateRange?.end ?? maxIso,
+      },
+    }));
+    setDateRangeError(null);
+  }, [travelData]);
 
   const updateIncludeSections = (
     section: keyof ExportOptions["includeSections"],
@@ -169,6 +255,22 @@ export default function ExportOptionsComponent() {
                   preserved. Includes all calculated fields and formulas for
                   comprehensive analysis.
                 </p>
+                <div className="mb-4 p-4 bg-blue-50/80 border border-blue-200 rounded-xl">
+                  <p className="text-sm text-slate-700">
+                    <span className="font-semibold">Records to export:</span>{" "}
+                    <span className="text-blue-600 font-medium">
+                      {getFilteredDataByStatus().length}
+                    </span>{" "}
+                    out of {travelData.length} total
+                    {exportOptions.statusFilter &&
+                      exportOptions.statusFilter !== "All Flights" && (
+                        <span className="text-slate-600">
+                          {" "}
+                          (filtered by: {exportOptions.statusFilter})
+                        </span>
+                      )}
+                  </p>
+                </div>
                 <Button
                   onClick={handleExportExcel}
                   disabled={isExporting || travelData.length === 0}
@@ -212,202 +314,216 @@ export default function ExportOptionsComponent() {
                   Date Range
                 </Label>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* START DATE */}
-                <Popover>
-                  <PopoverTrigger asChild>
+              <div className="space-y-2">
+                {dateRangeError ? (
+                  <div className="text-sm text-red-600 font-medium">
+                    {dateRangeError}
+                  </div>
+                ) : fileStart && fileEnd ? (
+                  <div className="text-sm text-slate-500">
+                    File date range: {format(new Date(fileStart), "PPP")} —{" "}
+                    {format(new Date(fileEnd), "PPP")}
+                  </div>
+                ) : null}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* START DATE (fixed to file start) */}
+                  <div>
                     <Button
                       variant="outline"
-                      className="w-full justify-start text-left font-normal rounded-xl h-12 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition-colors bg-transparent"
+                      disabled={!fileStart}
+                      title={
+                        fileStart ? "Start date fixed to file start" : "No data"
+                      }
+                      className="w-full justify-start text-left font-normal rounded-xl h-12 border-slate-200 bg-transparent"
                     >
                       <CalendarIcon className="h-4 w-4 mr-2 text-slate-400" />
-                      {exportOptions.dateRange?.start
-                        ? format(new Date(exportOptions.dateRange.start), "PPP")
+                      {fileStart
+                        ? format(new Date(fileStart), "PPP")
                         : "Select start date"}
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0 rounded-xl shadow-xl border-0">
-                    <Calendar
-                      mode="single"
-                      selected={
-                        exportOptions.dateRange?.start
-                          ? new Date(exportOptions.dateRange.start)
-                          : undefined
-                      }
-                      onSelect={(date) => {
-                        const formatted = date
-                          ? date.toISOString().split("T")[0]
-                          : new Date().toISOString().split("T")[0];
-                        const endDate =
-                          exportOptions.dateRange?.end ?? formatted;
-                        updateExportOptions({
-                          dateRange: {
-                            start: formatted,
-                            end: endDate,
-                          },
-                        });
-                      }}
-                      className="rounded-xl border-0"
-                    />
-                  </PopoverContent>
-                </Popover>
+                  </div>
 
-                {/* END DATE */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal rounded-xl h-12 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition-colors bg-transparent"
-                    >
-                      <CalendarIcon className="h-4 w-4 mr-2 text-slate-400" />
-                      {exportOptions.dateRange?.end
-                        ? format(new Date(exportOptions.dateRange.end), "PPP")
-                        : "Select end date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0 rounded-xl shadow-xl border-0">
-                    <Calendar
-                      mode="single"
-                      selected={
-                        exportOptions.dateRange?.end
-                          ? new Date(exportOptions.dateRange.end)
-                          : undefined
-                      }
-                      onSelect={(date) => {
-                        const formatted = date
-                          ? date.toISOString().split("T")[0]
-                          : new Date().toISOString().split("T")[0];
-                        const startDate =
-                          exportOptions.dateRange?.start ?? formatted;
-                        updateExportOptions({
-                          dateRange: {
-                            start: startDate,
-                            end: formatted,
-                          },
-                        });
-                      }}
-                      className="rounded-xl border-0"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
+                  {/* END DATE */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal rounded-xl h-12 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition-colors bg-transparent"
+                        disabled={!fileEnd}
+                      >
+                        <CalendarIcon className="h-4 w-4 mr-2 text-slate-400" />
+                        {exportOptions.dateRange?.end
+                          ? format(new Date(exportOptions.dateRange.end), "PPP")
+                          : "Select end date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 rounded-xl shadow-xl border-0">
+                      <Calendar
+                        mode="single"
+                        selected={
+                          exportOptions.dateRange?.end
+                            ? new Date(exportOptions.dateRange.end)
+                            : undefined
+                        }
+                        onSelect={(date) => {
+                          if (!date) return;
+                          const formatted = date.toISOString().split("T")[0];
+                          const startDate =
+                            exportOptions.dateRange?.start ??
+                            fileStart ??
+                            formatted;
 
-            {/* Include Sections */}
-            <div className="p-6 bg-slate-50/80 rounded-2xl border border-slate-100">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <Database className="h-4 w-4 text-purple-600" />
+                          if (fileEnd && formatted > fileEnd) {
+                            setDateRangeError(
+                              `End date cannot be after file end date (${format(
+                                new Date(fileEnd),
+                                "PPP"
+                              )}).`
+                            );
+                            // clamp to fileEnd
+                            updateExportOptions({
+                              dateRange: {
+                                start: startDate,
+                                end: fileEnd,
+                              },
+                            });
+                          } else {
+                            setDateRangeError(null);
+                            updateExportOptions({
+                              dateRange: {
+                                start: startDate,
+                                end: formatted,
+                              },
+                            });
+                          }
+                        }}
+                        className="rounded-xl border-0"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
-                <Label className="text-sm font-semibold text-slate-700">
-                  Include Sections
-                </Label>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <label
-                  htmlFor="summary-cards"
-                  className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
-                >
-                  <Checkbox
-                    id="summary-cards"
-                    checked={exportOptions.includeSections.summaryCards}
-                    onCheckedChange={(checked) =>
-                      updateIncludeSections("summaryCards", checked as boolean)
-                    }
-                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                  />
-                  <span className="text-sm text-slate-700 font-medium">
-                    Summary Cards
-                  </span>
-                </label>
 
-                <label
-                  htmlFor="data-table"
-                  className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
-                >
-                  <Checkbox
-                    id="data-table"
-                    checked={exportOptions.includeSections.dataTable}
-                    onCheckedChange={(checked) =>
-                      updateIncludeSections("dataTable", checked as boolean)
-                    }
-                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                  />
-                  <span className="text-sm text-slate-700 font-medium">
-                    Data Table
-                  </span>
-                </label>
-
-                <label
-                  htmlFor="charts"
-                  className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
-                >
-                  <Checkbox
-                    id="charts"
-                    checked={exportOptions.includeSections.charts}
-                    onCheckedChange={(checked) =>
-                      updateIncludeSections("charts", checked as boolean)
-                    }
-                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                  />
-                  <span className="text-sm text-slate-700 font-medium">
-                    Charts & Analytics
-                  </span>
-                </label>
-
-                <label
-                  htmlFor="raw-data"
-                  className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
-                >
-                  <Checkbox
-                    id="raw-data"
-                    checked={exportOptions.includeSections.rawData}
-                    onCheckedChange={(checked) =>
-                      updateIncludeSections("rawData", checked as boolean)
-                    }
-                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                  />
-                  <span className="text-sm text-slate-700 font-medium">
-                    Raw Data
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Filter by Flight Status */}
-            <div className="p-6 bg-slate-50/80 rounded-2xl border border-slate-100">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                  <Filter className="h-4 w-4 text-amber-600" />
+              {/* Include Sections */}
+              <div className="p-6 bg-slate-50/80 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Database className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <Label className="text-sm font-semibold text-slate-700">
+                    Include Sections
+                  </Label>
                 </div>
-                <Label className="text-sm font-semibold text-slate-700">
-                  Filter by Flight Status
-                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label
+                    htmlFor="summary-cards"
+                    className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
+                  >
+                    <Checkbox
+                      id="summary-cards"
+                      checked={exportOptions.includeSections.summaryCards}
+                      onCheckedChange={(checked) =>
+                        updateIncludeSections(
+                          "summaryCards",
+                          checked as boolean
+                        )
+                      }
+                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    />
+                    <span className="text-sm text-slate-700 font-medium">
+                      Summary Cards
+                    </span>
+                  </label>
+
+                  <label
+                    htmlFor="data-table"
+                    className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
+                  >
+                    <Checkbox
+                      id="data-table"
+                      checked={exportOptions.includeSections.dataTable}
+                      onCheckedChange={(checked) =>
+                        updateIncludeSections("dataTable", checked as boolean)
+                      }
+                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    />
+                    <span className="text-sm text-slate-700 font-medium">
+                      Data Table
+                    </span>
+                  </label>
+
+                  <label
+                    htmlFor="charts"
+                    className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
+                  >
+                    <Checkbox
+                      id="charts"
+                      checked={exportOptions.includeSections.charts}
+                      onCheckedChange={(checked) =>
+                        updateIncludeSections("charts", checked as boolean)
+                      }
+                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    />
+                    <span className="text-sm text-slate-700 font-medium">
+                      Charts & Analytics
+                    </span>
+                  </label>
+
+                  <label
+                    htmlFor="raw-data"
+                    className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
+                  >
+                    <Checkbox
+                      id="raw-data"
+                      checked={exportOptions.includeSections.rawData}
+                      onCheckedChange={(checked) =>
+                        updateIncludeSections("rawData", checked as boolean)
+                      }
+                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    />
+                    <span className="text-sm text-slate-700 font-medium">
+                      Raw Data
+                    </span>
+                  </label>
+                </div>
               </div>
-              <Select
-                value={exportOptions.statusFilter || "All Flights"}
-                onValueChange={(value) =>
-                  updateExportOptions({ statusFilter: value })
-                }
-              >
-                <SelectTrigger className="rounded-xl h-12 border-slate-200 hover:border-blue-400 focus:border-blue-500 bg-white transition-colors">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-0 shadow-xl">
-                  <SelectItem value="All Flights" className="rounded-lg">
-                    All Flights
-                  </SelectItem>
-                  <SelectItem value="Coming Only" className="rounded-lg">
-                    Coming Only
-                  </SelectItem>
-                  <SelectItem value="Gone Only" className="rounded-lg">
-                    Gone Only
-                  </SelectItem>
-                  <SelectItem value="Cancelled Only" className="rounded-lg">
-                    Cancelled Only
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+
+              {/* Filter by Flight Status */}
+              <div className="p-6 bg-slate-50/80 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <Filter className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <Label className="text-sm font-semibold text-slate-700">
+                    Filter by Flight Status
+                  </Label>
+                </div>
+                <Select
+                  value={exportOptions.statusFilter || "All Flights"}
+                  onValueChange={(value) =>
+                    updateExportOptions({ statusFilter: value })
+                  }
+                >
+                  <SelectTrigger className="rounded-xl h-12 border-slate-200 hover:border-blue-400 focus:border-blue-500 bg-white transition-colors">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-0 shadow-xl">
+                    <SelectItem value="All Flights" className="rounded-lg">
+                      All Flights
+                    </SelectItem>
+                    <SelectItem value="Coming Only" className="rounded-lg">
+                      Coming Only
+                    </SelectItem>
+                    <SelectItem value="Gone Only" className="rounded-lg">
+                      Gone Only
+                    </SelectItem>
+                    <SelectItem value="Cancelled Only" className="rounded-lg">
+                      Cancelled Only
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardContent>

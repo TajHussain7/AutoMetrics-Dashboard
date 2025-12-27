@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import { authenticateToken } from "../middleware/auth";
+import { authenticateToken, requireActiveUser } from "../middleware/auth";
 import { fileStorage } from "../storage/file-storage";
 import { FileStatus, uploadedFileSchema } from "@shared/upload-schema";
 import { processExcelData } from "../excel-processor";
@@ -31,6 +31,7 @@ const upload = multer({
 router.post(
   "/upload",
   authenticateToken,
+  requireActiveUser,
   upload.single("file"),
   async (req, res) => {
     try {
@@ -141,37 +142,42 @@ router.get("/active", authenticateToken, async (req, res) => {
 });
 
 // Update file data rows
-router.patch("/data/:fileId", authenticateToken, async (req, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: "Unauthorized" });
+router.patch(
+  "/data/:fileId",
+  authenticateToken,
+  requireActiveUser,
+  async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { fileId } = req.params;
+      const { updates } = req.body;
+
+      if (!Array.isArray(updates)) {
+        return res.status(400).json({ message: "Invalid updates format" });
+      }
+
+      await fileStorage.updateFileRows(fileId, updates);
+
+      // Return updated rows
+      const updatedData = await fileStorage.getFileData(fileId);
+      const updatedRows = updates.map((update) => updatedData[update.index]);
+
+      res.json({
+        status: "success",
+        updated_rows: updatedRows,
+        sync_token: Date.now().toString(),
+      });
+    } catch (error: any) {
+      console.error("Failed to update file data:", error);
+      res.status(500).json({
+        message: error.message || "Failed to update file data",
+      });
     }
-
-    const { fileId } = req.params;
-    const { updates } = req.body;
-
-    if (!Array.isArray(updates)) {
-      return res.status(400).json({ message: "Invalid updates format" });
-    }
-
-    await fileStorage.updateFileRows(fileId, updates);
-
-    // Return updated rows
-    const updatedData = await fileStorage.getFileData(fileId);
-    const updatedRows = updates.map((update) => updatedData[update.index]);
-
-    res.json({
-      status: "success",
-      updated_rows: updatedRows,
-      sync_token: Date.now().toString(),
-    });
-  } catch (error: any) {
-    console.error("Failed to update file data:", error);
-    res.status(500).json({
-      message: error.message || "Failed to update file data",
-    });
   }
-});
+);
 
 export default router;
 // At the end of the file

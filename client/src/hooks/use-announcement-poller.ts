@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { error } from "@/lib/logger";
 
 interface UseAnnouncementPollerOptions {
   pollInterval?: number; // milliseconds, default 45 seconds
@@ -29,7 +30,7 @@ export function useAnnouncementPoller({
       });
 
       if (!res.ok) {
-        console.error("Failed to fetch unread count:", res.status);
+        error("Failed to fetch unread count:", res.status);
         return previousCountRef.current || 0;
       }
 
@@ -57,7 +58,7 @@ export function useAnnouncementPoller({
 
       return count;
     } catch (err) {
-      console.error("Error fetching unread count:", err);
+      error("Error fetching unread count:", err);
       return previousCountRef.current || 0;
     }
   }, [toast, onUnreadCountChange]);

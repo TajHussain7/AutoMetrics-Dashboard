@@ -576,3 +576,12 @@ body,
 #root {
   overflow-x: hidden !important;
 }
+
+.prose img {
+  max-height: 100px;
+  object-fit: contain;
+}
+
+.ql-editor {
+  min-height: 200px;
+}

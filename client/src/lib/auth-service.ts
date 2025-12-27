@@ -1,10 +1,12 @@
 import axios from "axios";
+import { debug, error as errorLogger } from "@/lib/logger";
 
 export interface User {
   id: string;
   email: string;
   full_name: string;
   role: "admin" | "member";
+  status?: "active" | "inactive";
   created_at: string;
 }
 
@@ -23,17 +25,17 @@ class AuthService {
 
   async signIn(email: string, password: string): Promise<AuthResponse> {
     try {
-      console.debug("Auth service: Attempting login for:", email);
+      debug("Auth service: Attempting login for:", email);
       const response = await this.axiosInstance.post("/login", {
         email,
         password,
       });
-      console.debug("Auth service: Login response:", response.data);
+      debug("Auth service: Login response:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error("Auth service: Login error:", {
+      // Log minimal info; avoid printing full error objects in production
+      errorLogger("Auth service: Login error:", {
         status: error.response?.status,
-        data: error.response?.data,
         message: error.message,
       });
       return {
@@ -50,7 +52,7 @@ class AuthService {
     fullName: string
   ): Promise<AuthResponse> {
     try {
-      console.debug("Attempting to register user:", { email, fullName });
+      debug("Attempting to register user:", { email, fullName });
 
       const response = await this.axiosInstance.post("/register", {
         email,
@@ -58,13 +60,13 @@ class AuthService {
         fullName,
       });
 
-      console.debug("Registration response:", response.data);
+      debug("Registration response:", response.data);
 
       return response.data;
     } catch (error: any) {
-      console.error("Registration error:", {
+      // Only log minimal info
+      errorLogger("Registration error:", {
         status: error.response?.status,
-        data: error.response?.data,
         message: error.message,
       });
 
@@ -74,6 +76,69 @@ class AuthService {
           error.response?.data?.message ||
           error.message ||
           "Failed to create account",
+      };
+    }
+  }
+
+  async resendOtp(
+    email: string
+  ): Promise<{ message?: string; error?: string }> {
+    try {
+      const response = await this.axiosInstance.post("/resend-otp", { email });
+      return response.data;
+    } catch (error: any) {
+      return { error: error.response?.data?.message || error.message };
+    }
+  }
+
+  async verifyOtp(
+    email: string,
+    otp: string
+  ): Promise<AuthResponse & { verified?: boolean }> {
+    try {
+      const response = await this.axiosInstance.post("/verify-email", {
+        email,
+        otp,
+      });
+      return response.data;
+    } catch (error: any) {
+      return {
+        user: null,
+        error: error.response?.data?.message || error.message,
+      };
+    }
+  }
+
+  async requestPasswordReset(
+    email: string
+  ): Promise<{ message?: string; error?: string }> {
+    try {
+      const response = await this.axiosInstance.post(
+        "/request-password-reset",
+        { email }
+      );
+      return response.data;
+    } catch (error: any) {
+      return { error: error.response?.data?.message || error.message };
+    }
+  }
+
+  async resetPassword(
+    email: string,
+    otp: string,
+    newPassword: string
+  ): Promise<AuthResponse & { reset?: boolean }> {
+    try {
+      const response = await this.axiosInstance.post("/reset-password", {
+        email,
+        otp,
+        newPassword,
+      });
+      return response.data;
+    } catch (error: any) {
+      return {
+        user: null,
+        error: error.response?.data?.message || error.message,
       };
     }
   }

@@ -8,11 +8,13 @@ import {
   ChevronDown,
   Bell,
 } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAnnouncements } from "@/contexts/announcement-context";
+import { error as errorLogger } from "@/lib/logger";
 
 type ScreenType =
   | "dashboard"
@@ -43,6 +45,7 @@ export default function TopNav({ activeScreen, onScreenChange }: TopNavProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
 
@@ -80,7 +83,7 @@ export default function TopNav({ activeScreen, onScreenChange }: TopNavProps) {
           setAvatarUrl(data.avatar);
         }
       } catch (err) {
-        console.error("Failed to fetch profile:", err);
+        errorLogger("Failed to fetch profile:", err);
       }
     };
 
@@ -134,6 +137,7 @@ export default function TopNav({ activeScreen, onScreenChange }: TopNavProps) {
           {/* Right Section — Actions */}
           <div className="flex items-center gap-4">
             {/* Announcements Button with Badge */}
+
             <button
               onClick={() => navigate("/announcements")}
               className="relative p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -242,13 +246,13 @@ export default function TopNav({ activeScreen, onScreenChange }: TopNavProps) {
                           avatar: uploadedAvatar,
                         }));
                       } catch (err) {
-                        console.error("Failed to upload avatar:", err);
+                        errorLogger("Failed to upload avatar:", err);
                         setAvatarError(true);
                       }
                     };
                     reader.readAsDataURL(file);
                   } catch (err) {
-                    console.error("Avatar upload failed", err);
+                    errorLogger("Avatar upload failed", err);
                     setAvatarError(true);
                   }
                 }}
@@ -268,25 +272,72 @@ export default function TopNav({ activeScreen, onScreenChange }: TopNavProps) {
                   {!editing ? (
                     <div className="flex flex-col">
                       <button
-                        className="text-sm text-slate-700 text-left py-2 px-2 hover:bg-slate-50 rounded-md"
-                        onClick={() => {
+                        className={`text-sm text-slate-700 text-left py-2 px-2 rounded-md ${
+                          signingOut
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-slate-50"
+                        }`}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          if (signingOut) return;
                           navigate && navigate("/profile");
                         }}
+                        disabled={signingOut}
                       >
                         Edit profile
                       </button>
                       <button
-                        className="text-sm text-slate-700 text-left py-2 px-2 hover:bg-slate-50 rounded-md"
-                        onClick={async () => {
+                        className={`text-sm text-slate-700 text-left py-2 px-2 rounded-md ${
+                          signingOut
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-slate-50"
+                        }`}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          if (signingOut) return;
+                          navigate && navigate("/queries");
+                        }}
+                        disabled={signingOut}
+                      >
+                        My queries
+                      </button>
+                      <button
+                        className={`text-sm text-red-600 text-left py-2 px-2 rounded-md ${
+                          signingOut
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-red-50"
+                        }`}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          if (signingOut) return;
+                          navigate && navigate("/delete-account");
+                        }}
+                        disabled={signingOut}
+                      >
+                        Delete account
+                      </button>
+                      <button
+                        className={`text-sm text-slate-700 text-left py-2 px-2 rounded-md ${
+                          signingOut
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-slate-50"
+                        }`}
+                        onClick={async (ev) => {
+                          ev.stopPropagation();
+                          if (signingOut) return;
+                          setSigningOut(true);
                           try {
                             await signOut();
                             navigate && navigate("/login");
                           } catch (err) {
-                            console.error("Sign out failed", err);
+                            errorLogger("Sign out failed", err);
+                          } finally {
+                            setSigningOut(false);
                           }
                         }}
+                        disabled={signingOut}
                       >
-                        Sign out
+                        {signingOut ? "Signing out..." : "Sign out"}
                       </button>
                     </div>
                   ) : (
@@ -311,10 +362,8 @@ export default function TopNav({ activeScreen, onScreenChange }: TopNavProps) {
                           setProfile(updatedProfile);
                           setEditing(false);
                         } catch (err) {
-                          console.error("Failed to update profile", err);
-                          alert(
-                            "Failed to update profile. See console for details."
-                          );
+                          errorLogger("Failed to update profile", err);
+                          alert("Failed to update profile. Please try again.");
                         } finally {
                           setSaving(false);
                         }

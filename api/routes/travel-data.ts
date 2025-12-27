@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateToken } from "../middleware/auth";
+import { authenticateToken, requireActiveUser } from "../middleware/auth";
 import { TravelData, updateTravelDataSchema } from "@shared/schema";
 import { db } from "../db";
 import type { Collection } from "mongodb";
@@ -9,7 +9,7 @@ const router = Router();
 let travelDataCollection: Collection;
 
 // Create new travel data entry
-router.post("/", authenticateToken, async (req, res) => {
+router.post("/", authenticateToken, requireActiveUser, async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -81,7 +81,7 @@ router.get("/:sessionId", authenticateToken, async (req, res) => {
 });
 
 // Update travel data
-router.patch("/:id", authenticateToken, async (req, res) => {
+router.patch("/:id", authenticateToken, requireActiveUser, async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -157,31 +157,36 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 });
 
 // Delete travel data
-router.delete("/:id", authenticateToken, async (req, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: "Unauthorized" });
+router.delete(
+  "/:id",
+  authenticateToken,
+  requireActiveUser,
+  async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const objectId = new ObjectId(id);
+
+      const result = await db
+        .collection("travel_data")
+        .deleteOne({ _id: objectId });
+
+      if (result.deletedCount === 0) {
+        return res.status(404).json({ message: "Travel data not found" });
+      }
+
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Failed to delete travel data:", error);
+      res.status(500).json({
+        message: error.message || "Failed to delete travel data",
+      });
     }
-
-    const { id } = req.params;
-    const objectId = new ObjectId(id);
-
-    const result = await db
-      .collection("travel_data")
-      .deleteOne({ _id: objectId });
-
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ message: "Travel data not found" });
-    }
-
-    res.status(204).send();
-  } catch (error: any) {
-    console.error("Failed to delete travel data:", error);
-    res.status(500).json({
-      message: error.message || "Failed to delete travel data",
-    });
   }
-});
+);
 
 export default router;
 export { router as travelDataRouter };

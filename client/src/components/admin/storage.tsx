@@ -1,5 +1,7 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, HardDrive, ArrowLeft, Database } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +23,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useLocation } from "wouter";
 
 interface StorageItem {
   userId: string;
@@ -35,9 +38,9 @@ interface StorageItem {
 interface StorageStats {
   data: StorageItem[];
   summary: {
-    totalUsed: number; // GB (legacy)
-    totalUsedBytes?: number; // raw bytes
-    totalQuota: number; // GB
+    totalUsed: number;
+    totalUsedBytes?: number;
+    totalQuota: number;
     totalQuotaBytes?: number;
     percentage: number;
   };
@@ -74,6 +77,7 @@ export default function StoragePage() {
 
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   useEffect(() => {
     fetchStorageData();
@@ -190,12 +194,32 @@ export default function StoragePage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-6">
-          Storage Analytics
-        </h1>
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl mb-6">
+            <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 -mt-6 -mx-6 mb-6 rounded-t-2xl" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+                <HardDrive className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">
+                  Storage Analytics
+                </h1>
+                <p className="text-sm text-slate-500">
+                  Monitor and manage storage usage
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center py-24">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <span className="text-slate-600 font-medium">
+                Loading storage data...
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -203,228 +227,368 @@ export default function StoragePage() {
 
   if (!storageData) {
     return (
-      <div className="p-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-6">
-          Storage Analytics
-        </h1>
-        <Card className="p-6 text-center text-slate-600">
-          No storage data available
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl mb-6">
+            <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 -mt-6 -mx-6 mb-6 rounded-t-2xl" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+                <HardDrive className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">
+                  Storage Analytics
+                </h1>
+                <p className="text-sm text-slate-500">
+                  Monitor and manage storage usage
+                </p>
+              </div>
+            </div>
+          </div>
+          <Card className="p-12 text-center bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl border-slate-200">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4 mx-auto">
+              <Database className="w-8 h-8 text-slate-400" />
+            </div>
+            <p className="text-slate-600 font-medium">
+              No storage data available
+            </p>
+            <p className="text-sm text-slate-400 mt-1">
+              Storage analytics will appear here once data is available
+            </p>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-slate-900 mb-6">
-        Storage Analytics
-      </h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl mb-6">
+          <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 -mt-6 -mx-6 mb-6 rounded-t-2xl" />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="p-6">
-          <p className="text-sm text-slate-600 font-medium">
-            Total Storage Used
-          </p>
-          <p className="text-3xl font-bold text-slate-900 mt-2">
-            {formatBytes(storageData.summary.totalUsedBytes)}
-          </p>
-          <p className="text-xs text-slate-500 mt-2">
-            of {storageData.summary.totalQuota.toFixed(1)} GB total
-          </p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-slate-600 font-medium">Storage Usage</p>
-          <p className="text-3xl font-bold text-blue-600 mt-2">
-            {storageData.summary.percentage}%
-          </p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-slate-600 font-medium">
-            Available Storage
-          </p>
-          <p className="text-3xl font-bold text-slate-900 mt-2">
-            {formatBytes(
-              (storageData.summary.totalQuotaBytes || 0) -
-                (storageData.summary.totalUsedBytes || 0)
-            )}
-          </p>
-        </Card>
-      </div>
+          <div className="flex items-center justify-between pb-6 border-b border-slate-100">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+                <HardDrive className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">
+                  Storage Analytics
+                </h1>
+                <p className="text-sm text-slate-500">
+                  Monitor and manage storage usage
+                </p>
+              </div>
+            </div>
+          </div>
 
-      <Card>
-        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">
-            User Storage Details
-          </h2>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <Card className="group relative overflow-hidden bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl hover:border-blue-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-slate-500 mb-2 tracking-widest uppercase">
+                      Total Storage Used
+                    </p>
+                    <p className="text-3xl font-bold text-slate-900 tracking-tight">
+                      {formatBytes(storageData.summary.totalUsedBytes)}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-2">
+                      of {storageData.summary.totalQuota.toFixed(1)} GB total
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <HardDrive className="text-white h-7 w-7" />
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="group relative overflow-hidden bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl hover:border-purple-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-slate-500 mb-2 tracking-widest uppercase">
+                      Storage Usage
+                    </p>
+                    <p className="text-3xl font-bold text-purple-600 tracking-tight">
+                      {storageData.summary.percentage}%
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Database className="text-white h-7 w-7" />
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="group relative overflow-hidden bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl hover:border-green-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-green-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-slate-500 mb-2 tracking-widest uppercase">
+                      Available Storage
+                    </p>
+                    <p className="text-3xl font-bold text-slate-900 tracking-tight">
+                      {formatBytes(
+                        (storageData.summary.totalQuotaBytes || 0) -
+                          (storageData.summary.totalUsedBytes || 0)
+                      )}
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <HardDrive className="text-white h-7 w-7" />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        <Card className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl border-slate-200 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+                <Database className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900">
+                User Storage Details
+              </h2>
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => openClearAllDialog()}
-              className="text-red-600"
+              className="rounded-xl text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all"
             >
+              <Trash2 className="w-4 h-4 mr-2" />
               Clear All Storage
             </Button>
           </div>
-        </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Used</TableHead>
-                <TableHead>Quota</TableHead>
-                <TableHead>Usage %</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {storageData.data.map((item) => (
-                <TableRow key={item.userId}>
-                  <TableCell className="font-medium">{item.userName}</TableCell>
-                  <TableCell>{formatBytes(item.usedBytes)}</TableCell>
-                  <TableCell>{item.quota} GB</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-slate-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full"
-                          style={{ width: `${item.percentage}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-slate-600 font-medium">
-                        {item.percentage}%
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          openQuotaDialog(
-                            item.userId,
-                            item.userName,
-                            item.quota
-                          )
-                        }
-                      >
-                        Edit Quota
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          openClearDialog(item.userId, item.userName)
-                        }
-                      >
-                        <Trash2 size={16} className="text-red-600" />
-                      </Button>
-                    </div>
-                  </TableCell>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-slate-100 hover:bg-transparent">
+                  <TableHead className="font-semibold text-slate-700">
+                    User
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700">
+                    Used
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700">
+                    Quota
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700">
+                    Usage %
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700">
+                    Action
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-      {/* Quota Editor Dialog */}
-      <Dialog open={quotaDialogOpen} onOpenChange={setQuotaDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Storage Quota</DialogTitle>
-            <DialogDescription>
-              Adjust storage quota (GB) for the selected user.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4">
-            <label className="block text-sm text-slate-700 mb-2">User</label>
-            <div className="mb-3 font-medium">{quotaEditingUser?.userName}</div>
-
-            <label className="block text-sm text-slate-700 mb-2">
-              Quota (GB)
-            </label>
-            <Input
-              value={quotaInput}
-              onChange={(e) => setQuotaInput(e.target.value)}
-              type="number"
-              min={0}
-            />
+              </TableHeader>
+              <TableBody>
+                {storageData.data.map((item) => (
+                  <TableRow
+                    key={item.userId}
+                    className="border-slate-100 hover:bg-blue-50/50 transition-colors"
+                  >
+                    <TableCell className="font-medium text-slate-900">
+                      {item.userName}
+                    </TableCell>
+                    <TableCell className="text-slate-700">
+                      {formatBytes(item.usedBytes)}
+                    </TableCell>
+                    <TableCell className="text-slate-700">
+                      {item.quota} GB
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-28 bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className="bg-gradient-to-r from-blue-500 to-purple-600 h-2.5 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${Math.min(item.percentage, 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="text-sm text-slate-700 font-semibold min-w-[45px]">
+                          {item.percentage}%
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            openQuotaDialog(
+                              item.userId,
+                              item.userName,
+                              item.quota
+                            )
+                          }
+                          className="rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-all"
+                        >
+                          Edit Quota
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            openClearDialog(item.userId, item.userName)
+                          }
+                          className="rounded-lg hover:bg-red-50 transition-all"
+                        >
+                          <Trash2 size={16} className="text-red-600" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-          <DialogFooter>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setQuotaDialogOpen(false);
-                  setQuotaEditingUser(null);
-                  setQuotaInput("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={confirmUpdateQuota}>Save</Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </Card>
 
-      {/* Clear User Dialog */}
-      <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear User Storage</DialogTitle>
-            <DialogDescription>
-              This will permanently delete files associated with the user{" "}
-              <strong>{clearTarget?.userName}</strong>. This action cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setClearDialogOpen(false);
-                  setClearTarget(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={confirmClearUser}>
-                Clear Storage
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <Dialog open={quotaDialogOpen} onOpenChange={setQuotaDialogOpen}>
+          <DialogContent className="sm:max-w-md rounded-2xl border-slate-200">
+            <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 -mt-6 -mx-6 mb-4 rounded-t-2xl" />
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-2xl font-bold text-slate-900">
+                Edit Storage Quota
+              </DialogTitle>
+              <DialogDescription className="text-slate-600">
+                Adjust storage quota (GB) for the selected user.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  User
+                </label>
+                <div className="px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <p className="font-medium text-slate-900">
+                    {quotaEditingUser?.userName}
+                  </p>
+                </div>
+              </div>
 
-      {/* Clear All Dialog */}
-      <Dialog open={clearAllDialogOpen} onOpenChange={setClearAllDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear All Storage</DialogTitle>
-            <DialogDescription>
-              This will permanently delete files for all users. This action
-              cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setClearAllDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={confirmClearAll}>
-                Clear All
-              </Button>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  Quota (GB)
+                </label>
+                <Input
+                  value={quotaInput}
+                  onChange={(e) => setQuotaInput(e.target.value)}
+                  type="number"
+                  min={0}
+                  className="rounded-xl border-slate-200 h-11"
+                />
+              </div>
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setQuotaDialogOpen(false);
+                    setQuotaEditingUser(null);
+                    setQuotaInput("");
+                  }}
+                  className="flex-1 rounded-xl border-slate-200 hover:bg-slate-50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmUpdateQuota}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/25"
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+          <DialogContent className="sm:max-w-md rounded-2xl border-slate-200">
+            <div className="h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-600 -mt-6 -mx-6 mb-4 rounded-t-2xl" />
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-2xl font-bold text-slate-900">
+                Clear User Storage
+              </DialogTitle>
+              <DialogDescription className="text-slate-600 leading-relaxed">
+                This will permanently delete files associated with the user{" "}
+                <strong className="text-slate-900">
+                  {clearTarget?.userName}
+                </strong>
+                . This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="pt-4">
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setClearDialogOpen(false);
+                    setClearTarget(null);
+                  }}
+                  className="flex-1 rounded-xl border-slate-200 hover:bg-slate-50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmClearUser}
+                  className="flex-1 rounded-xl shadow-lg"
+                >
+                  Clear Storage
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={clearAllDialogOpen} onOpenChange={setClearAllDialogOpen}>
+          <DialogContent className="sm:max-w-md rounded-2xl border-slate-200">
+            <div className="h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-600 -mt-6 -mx-6 mb-4 rounded-t-2xl" />
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-2xl font-bold text-slate-900">
+                Clear All Storage
+              </DialogTitle>
+              <DialogDescription className="text-slate-600 leading-relaxed">
+                This will permanently delete files for{" "}
+                <strong className="text-slate-900">all users</strong>. This
+                action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="pt-4">
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => setClearAllDialogOpen(false)}
+                  className="flex-1 rounded-xl border-slate-200 hover:bg-slate-50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmClearAll}
+                  className="flex-1 rounded-xl shadow-lg"
+                >
+                  Clear All Storage
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

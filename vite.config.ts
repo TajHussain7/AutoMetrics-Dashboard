@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
   plugins: [react()],
@@ -8,6 +9,16 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     rollupOptions: {
+      plugins: process.env.ANALYZE
+        ? [
+            visualizer({
+              filename: "dist/public/bundle-stats.html",
+              open: false,
+              gzipSize: true,
+              brotliSize: true,
+            }),
+          ]
+        : [],
       output: {
         manualChunks: {
           vendor: ["react", "react-dom"],
@@ -44,16 +55,23 @@ export default defineConfig({
         secure: false,
         configure: (proxy, options) => {
           proxy.on("error", (err, req, res) => {
-            console.log("proxy error", err);
+            if (process.env.NODE_ENV !== "production")
+              console.error("proxy error", err);
           });
           proxy.on("proxyReq", (proxyReq, req, res) => {
-            console.log("Sending Request to the Target:", req.method, req.url);
+            if (process.env.NODE_ENV !== "production")
+              console.info(
+                "Sending Request to the Target:",
+                req.method,
+                req.url
+              );
           });
           proxy.on("proxyRes", (proxyRes, req, res) => {
-            console.log(
-              "Received Response from the Target:",
-              proxyRes.statusCode
-            );
+            if (process.env.NODE_ENV !== "production")
+              console.info(
+                "Received Response from the Target:",
+                proxyRes.statusCode
+              );
           });
         },
       },

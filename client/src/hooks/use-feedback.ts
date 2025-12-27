@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { FeedbackFormData, FeedbackResponse } from "@shared/feedback-schema";
 import { useToast } from "./use-toast";
+import { debug, error } from "@/lib/logger";
 
 export function useFeedback() {
   const { toast } = useToast();
@@ -8,7 +9,7 @@ export function useFeedback() {
   const submitFeedback = useMutation<FeedbackResponse, Error, FeedbackFormData>(
     {
       mutationFn: async (data) => {
-        console.debug("Submitting feedback data:", data);
+        debug("Submitting feedback data:", data);
 
         // Use relative API path instead of absolute URL
         const response = await fetch("/api/feedback", {
@@ -21,15 +22,15 @@ export function useFeedback() {
           credentials: "include", // Include cookies for authentication
         });
 
-        console.debug("Response status:", response.status);
-        console.debug(
+        debug("Response status:", response.status);
+        debug(
           "Response headers:",
           Object.fromEntries(response.headers.entries())
         );
 
         // Get the raw text first for debugging
         const responseText = await response.text();
-        console.debug("Raw response:", responseText);
+        debug("Raw response:", responseText);
 
         // Try to parse as JSON
         let result;
@@ -43,8 +44,9 @@ export function useFeedback() {
 
           result = JSON.parse(responseText);
         } catch (e) {
-          console.error("Response parsing error:", e);
-          console.error("Full response:", responseText);
+          // Use logger that redacts details in production
+          error("Response parsing error:", e);
+          error("Full response:", responseText);
           throw new Error(
             "Server returned an invalid response. Please try again or contact support."
           );

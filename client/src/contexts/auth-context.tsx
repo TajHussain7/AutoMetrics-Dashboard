@@ -1,13 +1,18 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { authService, User } from "@/lib/auth-service";
 import { useToast } from "@/hooks/use-toast";
+import { debug, error as errorLogger } from "@/lib/logger";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<AuthResponse>;
+  signIn: (
+    email: string,
+    password: string,
+    remember?: boolean
+  ) => Promise<AuthResponse>;
   signUp: (
     email: string,
     password: string,
@@ -40,22 +45,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // First check sessionStorage for user data
-        const storedUser = sessionStorage.getItem("user");
+        // First check localStorage and sessionStorage for user data (remember me uses localStorage)
+        const storedUser =
+          localStorage.getItem("user") || sessionStorage.getItem("user");
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
-          setLoading(false);
-          return;
+          // Validate stored user with the server to ensure cookie/session is valid and user is up-to-date
+          try {
+            const { user } = await authService.getSession();
+            if (user) {
+              setUser(user);
+              setLoading(false);
+              return;
+            }
+            // If there's no server session, clear stored user data
+            localStorage.removeItem("user");
+            sessionStorage.removeItem("user");
+          } catch (err) {
+            debug("Stored user validation failed:", err);
+            localStorage.removeItem("user");
+            sessionStorage.removeItem("user");
+          }
         }
 
-        // If no stored user, check the server session
+        // If no stored valid user, check the server session directly
         const { user } = await authService.getSession();
         if (user) {
+          // Persist to sessionStorage by default when discovered from server session
           sessionStorage.setItem("user", JSON.stringify(user));
           setUser(user);
         }
       } catch (error) {
-        console.error("Error loading user:", error);
+        errorLogger("Error loading user:", error);
         // Clear any invalid session data
         sessionStorage.removeItem("user");
       } finally {
@@ -64,11 +84,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initAuth();
+
+    // Setup deactivation fetch interceptor so server-side deactivation causes UI update
+    let cleanupFetch: (() => void) | undefined;
+    // Dynamically import the interceptor in the browser environment
+    import("@/lib/deactivation-interceptor")
+      .then(({ setupDeactivationFetchInterceptor }) => {
+        cleanupFetch = setupDeactivationFetchInterceptor();
+      })
+      .catch((err) => {
+        console.warn(
+          "Deactivation fetch interceptor failed to initialize:",
+          err
+        );
+      });
+
+    return () => {
+      if (cleanupFetch) cleanupFetch();
+    };
   }, []);
 
   const signIn = async (
     email: string,
-    password: string
+    password: string,
+    remember = false
   ): Promise<AuthResponse> => {
     try {
       const response = await authService.signIn(email, password);
@@ -77,6 +116,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(response.user);
+      // Persist user data based on remember flag (localStorage for long lived, sessionStorage otherwise)
+      if (response.user) {
+        if (remember) {
+          localStorage.setItem("user", JSON.stringify(response.user));
+        } else {
+          sessionStorage.setItem("user", JSON.stringify(response.user));
+        }
+      }
+
       toast({
         title: "Welcome back!",
         description: "You have successfully signed in.",
@@ -84,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return response;
     } catch (error) {
-      console.error("Error signing in:", error);
+      errorLogger("Error signing in:", error);
       toast({
         title: "Error signing in",
         description: "Please check your credentials and try again.",
@@ -116,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return response;
     } catch (error) {
-      console.error("Error signing up:", error);
+      errorLogger("Error signing up:", error);
       toast({
         title: "Error creating account",
         description: "Please try again with different credentials.",
@@ -133,14 +181,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await authService.signOut();
+      // Clear stored user from both storage locations
+      sessionStorage.removeItem("user");
+      localStorage.removeItem("user");
       setUser(null);
       toast({
         title: "Signed out",
         description: "You have been successfully signed out.",
       });
-      window.location.href = "/login";
+      // Do not perform navigation here. Callers should navigate (SPA navigation) after signOut.
     } catch (error) {
-      console.error("Error signing out:", error);
+      errorLogger("Error signing out:", error);
       toast({
         title: "Error signing out",
         description: "Please try again.",
@@ -149,6 +200,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   };
+
+  // Listen for global "account-deactivated" events and update user status accordingly
+  useEffect(() => {
+    const handler = (ev: any) => {
+      const data = ev?.detail || {};
+      setUser((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, status: "inactive" as const };
+        try {
+          // Persist the change to whichever storage currently used
+          if (localStorage.getItem("user"))
+            localStorage.setItem("user", JSON.stringify(next));
+          if (sessionStorage.getItem("user"))
+            sessionStorage.setItem("user", JSON.stringify(next));
+        } catch (e) {
+          console.warn("Failed to persist user status change locally:", e);
+        }
+        toast({
+          title: "Account deactivated",
+          description:
+            "Your account has been deactivated by an administrator. Some actions are disabled.",
+          variant: "destructive",
+        });
+        return next;
+      });
+    };
+
+    window.addEventListener("account-deactivated", handler as EventListener);
+    return () =>
+      window.removeEventListener(
+        "account-deactivated",
+        handler as EventListener
+      );
+  }, [toast]);
+
+  // Listen for global "account-reactivated" events and update user status accordingly
+  useEffect(() => {
+    const handler = (ev: any) => {
+      const data = ev?.detail || {};
+      setUser((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, status: "active" as const };
+        try {
+          if (localStorage.getItem("user"))
+            localStorage.setItem("user", JSON.stringify(next));
+          if (sessionStorage.getItem("user"))
+            sessionStorage.setItem("user", JSON.stringify(next));
+        } catch (e) {
+          console.warn("Failed to persist user status change locally:", e);
+        }
+        toast({
+          title: "Account reactivated",
+          description: "Your account access has been restored.",
+        });
+        return next;
+      });
+    };
+
+    window.addEventListener("account-reactivated", handler as EventListener);
+    return () =>
+      window.removeEventListener(
+        "account-reactivated",
+        handler as EventListener
+      );
+  }, [toast]);
 
   return (
     <AuthContext.Provider

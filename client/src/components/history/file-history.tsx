@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useTravelData } from "@/contexts/travel-data-context";
 import { formatDistance } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { debug, error as errorLogger } from "@/lib/logger";
 import { motion } from "framer-motion";
 import {
   AlertDialog,
@@ -61,7 +62,7 @@ export function FileHistory() {
       const data = await response.json();
       setSessions(data);
     } catch (error) {
-      console.error("Error fetching file history:", error);
+      errorLogger("Error fetching file history:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -89,7 +90,7 @@ export function FileHistory() {
         description: "File deleted successfully",
       });
     } catch (error) {
-      console.error("Error deleting session:", error);
+      errorLogger("Error deleting session:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -102,7 +103,7 @@ export function FileHistory() {
 
   const handleRestore = async (sessionId: string) => {
     try {
-      console.debug("Restoring session:", sessionId);
+      debug("Restoring session:", sessionId);
       const response = await fetch(`/api/files/${sessionId}/restore`, {
         method: "POST",
         credentials: "include",
@@ -115,7 +116,7 @@ export function FileHistory() {
       const rawText = await response.text();
 
       if (!response.ok) {
-        console.error("Server response:", rawText);
+        errorLogger("Server response:", rawText);
         throw new Error(
           `Failed to restore session: ${response.status} ${response.statusText} - ${rawText}`
         );
@@ -125,8 +126,7 @@ export function FileHistory() {
       try {
         responseData = JSON.parse(rawText);
       } catch (parseError) {
-        console.error("Failed to parse response:", rawText);
-        throw new Error("Invalid JSON response from server");
+        errorLogger("Failed to parse response:", rawText);
       }
 
       if (!responseData.session || !responseData.data) {
@@ -136,12 +136,12 @@ export function FileHistory() {
       const { session, data } = responseData;
 
       // Update travel data context with restored data
-      console.debug("Setting travel data:", data);
+      debug("Setting travel data: (length)", data?.length || 0);
       setTravelData(data);
 
       // Set the restored session as the active session
       if (session && session._id) {
-        console.debug("Setting current session:", session._id);
+        debug("Setting current session:", session._id);
         setCurrentSessionId(session._id);
 
         // Trigger a state update in the parent dashboard component

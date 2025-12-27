@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { error } from "@/lib/logger";
 import { UploadCloud } from "lucide-react";
 import { ProtectedDataView } from "@/components/auth/protected-data-view";
 import { useAuth } from "@/contexts/auth-context";
@@ -45,8 +46,8 @@ export function FileUploadCard() {
         title: "Upload successful",
         description: "Your file has been uploaded successfully",
       });
-    } catch (error) {
-      console.error("Upload error:", error);
+    } catch (error_) {
+      error("Upload error:", error_);
       toast({
         title: "Upload failed",
         description: "There was an error uploading your file",

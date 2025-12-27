@@ -1,12 +1,23 @@
 import { Router, Request, Response } from "express";
-import { User, IUser } from "../models/user";
+import { User } from "../models/user";
 import { Announcement } from "../models/announcement";
 import { Query } from "../models/query";
 import { Review } from "../models/review";
 import { File } from "../models/file";
 import { FileData } from "../models/file-data";
 import { UploadSession } from "../models/upload-session";
-import { isAdmin, authenticateToken } from "../middleware/auth";
+import { TravelData } from "../models/travel-data";
+import { Feedback } from "../models/feedback";
+import { Contact } from "../models/contact";
+import { EmailVerification } from "../models/emailVerification";
+import {
+  isAdmin,
+  authenticateToken,
+  requireActiveUser,
+} from "../middleware/auth";
+import { debug, info, warn, error } from "../utils/logger.js";
+import fs from "fs";
+import path from "path";
 
 const router = Router();
 
@@ -17,8 +28,9 @@ const router = Router();
 // Get all users (admin only)
 router.get("/users", isAdmin, async (req: Request, res: Response) => {
   try {
+    // Include verification fields so admin can view whether users are verified
     const users = await User.find({}, "-password").select(
-      "fullName email role status createdAt company_name phone_number"
+      "fullName email role status createdAt company_name phone_number isVerified emailVerifiedAt"
     );
     res.json(users);
   } catch (error: any) {
@@ -92,6 +104,66 @@ router.patch(
         return res.status(404).json({ message: "User not found" });
       }
 
+      // Attempt to notify the user by email about status change (best-effort)
+      try {
+        const nodemailer = await import("nodemailer");
+        const from =
+          process.env.SMTP_FROM ||
+          process.env.RESEND_FROM ||
+          process.env.ADMIN_EMAIL ||
+          "no-reply@example.com";
+        if (
+          process.env.SMTP_HOST &&
+          process.env.SMTP_USER &&
+          process.env.SMTP_PASS
+        ) {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT) || 587,
+            secure: process.env.SMTP_SECURE === "true",
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            },
+          });
+
+          const subject =
+            status === "inactive"
+              ? "Your account has been deactivated"
+              : "Your account has been reactivated";
+
+          const html = `
+            <p>Hi ${user.fullName || user.email},</p>
+            <p>Your account has been <strong>${
+              status === "inactive" ? "deactivated" : "reactivated"
+            }</strong> by an administrator.</p>
+            <p>If you have questions, please reply to this email or contact support.</p>
+          `;
+
+          await transporter.sendMail({
+            from,
+            to: user.email,
+            subject,
+            html,
+          });
+        }
+      } catch (emailErr) {
+        warn("Failed to send status notification email:", emailErr);
+      }
+
+      // Broadcast account status change via Announcement WebSocket (best-effort)
+      try {
+        const wsServer = (global as any).__wsServer;
+        if (wsServer && typeof wsServer.broadcast === "function") {
+          wsServer.broadcast({
+            type: "ACCOUNT_STATUS_CHANGED",
+            data: { userId: String(user._id), status },
+          });
+        }
+      } catch (wsErr) {
+        error("Failed to broadcast account status change:", wsErr);
+      }
+
       res.json(user);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -99,17 +171,173 @@ router.patch(
   }
 );
 
-// Delete user (admin only)
+// Delete user (admin only) with cascading cleanup of related data
 router.delete(
   "/users/:userId",
   isAdmin,
   async (req: Request, res: Response) => {
     try {
-      const user = await User.findByIdAndDelete(req.params.userId);
+      const { userId } = req.params;
+      const user = await User.findById(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.json({ message: "User deleted successfully" });
+
+      // Collect files for the user and remove their related FileData entries
+      const files = await File.find({ user_id: userId }).select("_id");
+      const fileIds = files.map((f) => f._id);
+
+      let deletedFileData = 0;
+      let deletedFiles = 0;
+      let deletedUploadSessions = 0;
+      let deletedQueries = 0;
+      let deletedTravelData = 0;
+      let deletedFeedback = 0;
+      let deletedEmailVerifications = 0;
+      let cleanedContacts = 0;
+      let deletedAttachmentFiles = 0;
+
+      try {
+        const fdResult = await FileData.deleteMany({
+          file_id: { $in: fileIds },
+        });
+        deletedFileData = fdResult.deletedCount || 0;
+      } catch (err) {
+        error("Failed to delete file data for user:", err);
+      }
+
+      try {
+        const fResult = await File.deleteMany({ user_id: userId });
+        deletedFiles = fResult.deletedCount || 0;
+      } catch (err) {
+        error("Failed to delete files for user:", err);
+      }
+
+      // Remove upload sessions associated with the user
+      try {
+        const uResult = await UploadSession.deleteMany({ user_id: userId });
+        deletedUploadSessions = uResult.deletedCount || 0;
+      } catch (err) {
+        error("Failed to delete upload sessions for user:", err);
+      }
+
+      // Delete support queries/threads for the user (keep reviews intact)
+      try {
+        // First, find queries so we can remove uploaded attachments from disk
+        const userQueries = await Query.find({ user_id: userId }).lean();
+        try {
+          const uploadsDir = path.resolve(__dirname, "..", "uploads");
+          for (const q of userQueries) {
+            const messages = (q as any).messages || [];
+            for (const m of messages) {
+              const attachments = m.attachments || [];
+              for (const a of attachments) {
+                if (!a || !a.url) continue;
+                try {
+                  // Only handle local uploads served under /uploads/
+                  const url = String(a.url);
+                  const parsed = url.split("/");
+                  const fileName = parsed[parsed.length - 1];
+                  if (!fileName) continue;
+                  const filePath = path.join(uploadsDir, fileName);
+                  if (fs.existsSync(filePath)) {
+                    await fs.promises.unlink(filePath);
+                    deletedAttachmentFiles++;
+                  }
+                } catch (fileErr) {
+                  error("Failed to delete attachment file:", fileErr);
+                }
+              }
+            }
+          }
+        } catch (fsErr) {
+          error("Failed to cleanup attachment files:", fsErr);
+        }
+
+        const qResult = await Query.deleteMany({ user_id: userId });
+        deletedQueries = qResult.deletedCount || 0;
+      } catch (err) {
+        error("Failed to delete queries for user:", err);
+      }
+
+      // Delete travel data belonging to this user
+      try {
+        const tdResult = await TravelData.deleteMany({ user_id: userId });
+        deletedTravelData = tdResult.deletedCount || 0;
+      } catch (err) {
+        error("Failed to delete travel data for user:", err);
+      }
+
+      // Preserve feedback authored by this user (do NOT delete).
+      // The user self-delete flow keeps feedback entries to retain historical records.
+      try {
+        // Optionally count feedback for reporting purposes but do not delete
+        const fbCount = await Feedback.countDocuments({
+          $or: [
+            { user_id: userId },
+            { email: (user.email || "").toLowerCase() },
+          ],
+        });
+        // No feedback is deleted when an admin removes a user to match self-delete behavior
+        deletedFeedback = 0;
+      } catch (err) {
+        error("Failed to inspect feedback for user:", err);
+      }
+
+      // Delete any email verifications for this user
+      try {
+        const evResult = await EmailVerification.deleteMany({ userId: userId });
+        deletedEmailVerifications = evResult.deletedCount || 0;
+      } catch (err) {
+        error("Failed to delete email verifications for user:", err);
+      }
+
+      // For contact messages where this user was the responder, unset the response_by
+      try {
+        const updateResult = await Contact.updateMany(
+          { response_by: userId },
+          { $unset: { response_by: "", response_at: "" } }
+        );
+        cleanedContacts = updateResult.modifiedCount || 0;
+      } catch (err) {
+        error("Failed to cleanup contacts for user:", err);
+      }
+
+      // If user authored announcements, keep the announcement but clear created_by
+      try {
+        await Announcement.updateMany(
+          { created_by: userId },
+          { $set: { created_by: null } }
+        );
+      } catch (err) {
+        error("Failed to unset announcement authorship:", err);
+      }
+
+      // Unset any assigned_to references on queries pointing to this user
+      try {
+        await Query.updateMany(
+          { assigned_to: userId },
+          { $unset: { assigned_to: "" } }
+        );
+      } catch (err) {
+        error("Failed to unset assigned_to in queries:", err);
+      }
+
+      // Finally delete the user document
+      await User.findByIdAndDelete(userId);
+
+      res.json({
+        message: "User deleted successfully",
+        deletedFiles,
+        deletedFileData,
+        deletedUploadSessions,
+        deletedQueries,
+        deletedAttachmentFiles,
+        deletedTravelData,
+        deletedFeedback,
+        deletedEmailVerifications,
+        cleanedContacts,
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -139,7 +367,7 @@ router.get("/users/:userId/storage", async (req: Request, res: Response) => {
 // ADMIN: Get storage usage per user and global summary (using aggregation pipeline for performance)
 router.get("/storage", isAdmin, async (req: Request, res: Response) => {
   try {
-    console.debug("[/storage] Starting...");
+    debug("[/storage] Starting");
 
     // Aggregation pipeline: group upload sessions by user_id and sum sizes
     const fileStats = await UploadSession.aggregate([
@@ -151,7 +379,7 @@ router.get("/storage", isAdmin, async (req: Request, res: Response) => {
       },
     ]);
 
-    console.debug("[/storage] fileStats:", fileStats);
+    debug("[/storage] fileStats length:", fileStats.length);
 
     // Create a map for quick lookup, skip null user_ids
     const fileSizeMap = new Map<string, number>();
@@ -160,14 +388,14 @@ router.get("/storage", isAdmin, async (req: Request, res: Response) => {
         fileSizeMap.set(stat._id.toString(), stat.totalSizeBytes || 0);
       }
     }
-    console.debug("[/storage] fileSizeMap:", Array.from(fileSizeMap.entries()));
+    debug("[/storage] fileSizeMap size:", fileSizeMap.size);
 
     // Get all users
-    console.debug("[/storage] Fetching users...");
+    debug("[/storage] Fetching users...");
     const users = await User.find().select(
       "fullName email storage_quota_bytes"
     );
-    console.debug("[/storage] Found", users.length, "users");
+    debug("[/storage] Found", users.length, "users");
 
     const storageData = [] as any[];
     let totalUsed = 0;
@@ -201,15 +429,11 @@ router.get("/storage", isAdmin, async (req: Request, res: Response) => {
         totalQuota > 0 ? Math.round((totalUsed / totalQuota) * 100) : 0,
     };
 
-    console.debug(
-      "[/storage] Sending response with",
-      storageData.length,
-      "users"
-    );
+    debug("[/storage] Sending response with", storageData.length, "users");
     res.json({ data: storageData, summary });
   } catch (error: any) {
-    console.error("[/storage] ERROR:", error.message);
-    console.error("[/storage] Stack:", error.stack);
+    error("[/storage] ERROR:", error.message);
+    error("[/storage] Stack:", error.stack);
     res.status(500).json({
       message: error.message,
       type: error.constructor.name,
@@ -302,7 +526,7 @@ router.get("/announcements", isAdmin, async (req: Request, res: Response) => {
   try {
     const announcements = await Announcement.find()
       .populate("created_by", "fullName email")
-      .sort({ created_at: -1 });
+      .sort({ pinned: -1, created_at: -1 });
     res.json(announcements);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -312,7 +536,7 @@ router.get("/announcements", isAdmin, async (req: Request, res: Response) => {
 // Create announcement
 router.post("/announcements", isAdmin, async (req: Request, res: Response) => {
   try {
-    const { title, content, broadcastEmail } = req.body;
+    const { title, content, broadcastEmail, pinned, attachments } = req.body;
 
     if (!title || !content) {
       return res
@@ -320,19 +544,39 @@ router.post("/announcements", isAdmin, async (req: Request, res: Response) => {
         .json({ message: "Title and content are required" });
     }
 
-    console.debug("\n📝 [CREATE ANNOUNCEMENT] Starting process");
-    console.debug(`   ├─ Title: ${title}`);
-    console.debug(`   ├─ Content length: ${content.length} chars`);
+    debug("CREATE ANNOUNCEMENT: Starting", { title, pinned: Boolean(pinned) });
+
+    // Basic validation for attachments array - only accept uploads served from our uploads directory
+    const validatedAttachments: any[] = [];
+    if (Array.isArray(attachments)) {
+      for (const a of attachments) {
+        if (!a || typeof a.url !== "string") continue;
+        // Accept local uploads (starting with /uploads/) OR absolute URLs to same host
+        if (!a.url.startsWith("/uploads/") && !a.url.startsWith("http"))
+          continue;
+        validatedAttachments.push({
+          filename: a.filename,
+          url: a.url,
+          mimeType: a.mimeType || a.type,
+          size: a.size || 0,
+        });
+      }
+    }
 
     const announcement = new Announcement({
       title,
       content,
+      attachments: validatedAttachments,
+      pinned: Boolean(pinned),
+      pinned_at: pinned ? new Date() : null,
       created_by: (req as any).user._id,
+      // For admin-created UI announcements, mark as broadcast when requested
+      broadcast: Boolean(broadcastEmail || pinned),
     });
 
     await announcement.save();
     await announcement.populate("created_by", "fullName email");
-    console.debug(`   ├─ ✅ Saved to DB: ${announcement._id}`);
+    debug(`Saved announcement to DB`, { id: announcement._id });
 
     // Insert lightweight references into each user's announcements array
     try {
@@ -349,45 +593,74 @@ router.post("/announcements", isAdmin, async (req: Request, res: Response) => {
           },
         }
       );
-      console.debug(
-        `   ├─ ✅ Pushed refs to ${updateResult.modifiedCount} users`
-      );
+      debug("Pushed announcement refs to users", {
+        count: updateResult.modifiedCount,
+      });
     } catch (pushErr) {
-      console.error(`   ├─ ❌ Failed to push refs:`, pushErr);
+      error(`   ├─ ❌ Failed to push refs:`, pushErr);
     }
 
     // Broadcast announcement via WebSocket (if server has it)
     try {
       const wsServer = (global as any).__wsServer;
       if (wsServer) {
-        console.debug(`   ├─ WebSocket server found`);
+        debug(`WebSocket server found`);
         const broadcastData = {
           type: "ANNOUNCEMENT_CREATED",
           data: {
             _id: announcement._id,
             title: announcement.title,
             content: announcement.content,
+            attachments: announcement.attachments || [],
+            pinned: announcement.pinned || false,
             created_at: announcement.created_at,
             created_by: announcement.created_by,
+            // Include broadcast flag and recipients metadata so clients can
+            // decide whether to surface the toast to the current user.
+            broadcast: Boolean(announcement.broadcast || false),
+            recipients: announcement.recipients || [],
           },
         };
         const sentCount = wsServer.broadcast(broadcastData);
-        console.debug(`   ├─ ✅ Broadcasted to ${sentCount} clients`);
+        debug("Broadcasted announcement to clients", { sentCount });
       } else {
-        console.debug(`   ├─ ⚠️  WebSocket server not available`);
+        debug("WebSocket server not available for broadcast");
       }
     } catch (wsErr) {
-      console.error(`   ├─ ❌ Broadcast error:`, wsErr);
+      error(`   ├─ ❌ Broadcast error:`, wsErr);
     }
 
-    console.debug(`   └─ ✅ Announcement creation complete\n`);
+    debug(`Announcement creation complete`);
 
     res.status(201).json(announcement);
   } catch (error: any) {
-    console.error(`❌ [CREATE ANNOUNCEMENT ERROR]:`, error.message);
+    error(`❌ [CREATE ANNOUNCEMENT ERROR]:`, error.message);
     res.status(500).json({ message: error.message });
   }
 });
+
+// Delete all announcements (must come BEFORE /:id routes for proper matching)
+router.delete(
+  "/announcements/all",
+  isAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const result = await Announcement.deleteMany({});
+      // Clean up all user announcement references
+      try {
+        await User.updateMany({}, { $set: { announcements: [] } });
+      } catch (cleanupErr) {
+        error("Failed to cleanup user announcement refs:", cleanupErr);
+      }
+      res.json({
+        message: "All announcements deleted successfully",
+        deletedCount: result.deletedCount,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
 
 // Update announcement
 router.patch(
@@ -395,10 +668,21 @@ router.patch(
   isAdmin,
   async (req: Request, res: Response) => {
     try {
-      const { title, content } = req.body;
+      const { title, content, pinned, attachments } = req.body;
+
+      const update: any = {};
+      if (typeof title !== "undefined") update.title = title;
+      if (typeof content !== "undefined") update.content = content;
+      if (typeof attachments !== "undefined") update.attachments = attachments;
+
+      if (typeof pinned !== "undefined") {
+        update.pinned = Boolean(pinned);
+        update.pinned_at = pinned ? new Date() : null;
+      }
+
       const announcement = await Announcement.findByIdAndUpdate(
         req.params.id,
-        { title, content },
+        update,
         { new: true }
       ).populate("created_by", "fullName email");
 
@@ -430,7 +714,7 @@ router.delete(
           { $pull: { announcements: { announcement: announcement._id } } }
         );
       } catch (cleanupErr) {
-        console.error("Failed to cleanup user announcement refs:", cleanupErr);
+        error("Failed to cleanup user announcement refs:", cleanupErr);
       }
 
       res.json({ message: "Announcement deleted successfully" });
@@ -461,13 +745,53 @@ router.get(
   }
 );
 
-// Get all queries
 router.get("/queries", isAdmin, async (req: Request, res: Response) => {
   try {
-    const queries = await Query.find()
+    const {
+      status,
+      userId,
+      category,
+      startDate,
+      endDate,
+      search,
+      page = "1",
+      limit = "50",
+    } = req.query as any;
+    const queryObj: any = {};
+
+    if (status) queryObj.status = status;
+    if (userId) queryObj.user_id = userId;
+    if (category) queryObj.category = category;
+
+    if (startDate || endDate) {
+      queryObj.created_at = {};
+      if (startDate) queryObj.created_at.$gte = new Date(startDate);
+      if (endDate) queryObj.created_at.$lte = new Date(endDate);
+    }
+
+    if (search) {
+      queryObj.$or = [
+        { subject: { $regex: search, $options: "i" } },
+        { message: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const p = Math.max(1, parseInt(page, 10));
+    const l = Math.max(1, parseInt(limit, 10));
+
+    const total = await Query.countDocuments(queryObj);
+    const queries = await Query.find(queryObj)
       .populate("user_id", "fullName email")
-      .sort({ created_at: -1 });
-    res.json(queries);
+      .sort({ created_at: -1 })
+      .skip((p - 1) * l)
+      .limit(l);
+
+    res.json({
+      queries,
+      total,
+      page: p,
+      totalPages: Math.max(1, Math.ceil(total / l)),
+    });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -493,9 +817,10 @@ router.get("/queries/:id", isAdmin, async (req: Request, res: Response) => {
 router.post(
   "/queries",
   authenticateToken,
+  requireActiveUser,
   async (req: Request, res: Response) => {
     try {
-      const { subject, message } = req.body;
+      const { subject, message, category, priority, attachments } = req.body;
 
       if (!subject || !message) {
         return res
@@ -507,10 +832,38 @@ router.post(
         user_id: (req as any).user._id,
         subject,
         message,
+        category: category || undefined,
+        priority: priority || undefined,
+        messages: [
+          {
+            author: "user",
+            message,
+            attachments: Array.isArray(attachments) ? attachments : [],
+            created_at: new Date(),
+          },
+        ],
       });
 
       await query.save();
       await query.populate("user_id", "fullName email");
+
+      // Optionally notify admins via announcement websocket (internal; not broadcast)
+      try {
+        const announcement = new Announcement({
+          title: `New support query: ${subject}`,
+          content: `${
+            (req as any).user.fullName || "A user"
+          } submitted a query: ${subject}`,
+          created_by: (req as any).user._id,
+          recipients: [],
+          broadcast: false,
+        });
+        await announcement.save();
+        // Insert lightweight references into admin users (optional)
+      } catch (notifyErr) {
+        error("Failed to create admin notification for query:", notifyErr);
+      }
+
       res.status(201).json(query);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -524,23 +877,168 @@ router.patch(
   isAdmin,
   async (req: Request, res: Response) => {
     try {
-      const { reply } = req.body;
+      const { reply, attachments, status } = req.body;
 
-      if (!reply) {
+      if (!reply || !reply.trim()) {
         return res.status(400).json({ message: "Reply is required" });
       }
 
-      const query = await Query.findByIdAndUpdate(
-        req.params.id,
-        { reply, status: "replied" },
-        { new: true }
-      ).populate("user_id", "fullName email");
+      const q = await Query.findById(req.params.id);
+      if (!q) return res.status(404).json({ message: "Query not found" });
 
-      if (!query) {
-        return res.status(404).json({ message: "Query not found" });
+      q.messages = q.messages || [];
+      q.messages.push({
+        author: "admin",
+        message: reply,
+        attachments: Array.isArray(attachments) ? attachments : [],
+        created_at: new Date(),
+      } as any);
+
+      q.status = status || "answered";
+      // Keep legacy reply field for compatibility
+      q.reply = reply;
+
+      await q.save();
+      await q.populate("user_id", "fullName email");
+
+      // Create an announcement for the user so they get notified
+      try {
+        const userId = (q as any).user_id?._id || (q as any).user_id;
+        const announcement = new Announcement({
+          title: `Reply to your support query: ${q.subject}`,
+          content: reply,
+          created_by: (req as any).user._id,
+          // Target the announcement to the specific user only
+          recipients: userId ? [userId] : [],
+          broadcast: false,
+        });
+        await announcement.save();
+
+        // Add announcement reference to user (unread)
+        if (userId) {
+          await (
+            await (q as any).populate("user_id")
+          ).user_id.updateOne({
+            $push: {
+              announcements: {
+                announcement: announcement._id,
+                read: false,
+                notified: false,
+                created_at: new Date(),
+              },
+            },
+          } as any);
+        }
+
+        // Broadcast a real-time notification for the query reply
+        try {
+          const wsServer = (global as any).__wsServer;
+          if (wsServer) {
+            const broadcastData = {
+              type: "QUERY_REPLY",
+              data: {
+                queryId: q._id,
+                userId: userId,
+                reply,
+                announcementId: announcement._id,
+              },
+            };
+            const sent = wsServer.broadcast(broadcastData);
+            debug(`Broadcasted QUERY_REPLY to clients`, { sent });
+          } else {
+            debug(`WebSocket server not available for QUERY_REPLY`);
+          }
+        } catch (wsErr) {
+          error("Failed to broadcast QUERY_REPLY:", wsErr);
+        }
+      } catch (notifyErr) {
+        error("Failed to notify user about query reply:", notifyErr);
       }
 
-      res.json(query);
+      res.json(q);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+// Admin: React to a message (like/dislike)
+router.patch(
+  "/queries/:id/messages/:messageId/reactions",
+  isAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { type } = req.body;
+      if (!type || !["like", "dislike"].includes(type)) {
+        return res.status(400).json({ message: "Invalid reaction type" });
+      }
+
+      const q = await Query.findById(req.params.id);
+      if (!q) return res.status(404).json({ message: "Query not found" });
+
+      // Robustly find the sub-message by its _id without relying on Mongoose's
+      // DocumentArray.id (which TypeScript may not recognize on the typed array).
+      const msg = (q.messages || []).find(
+        (m: any) => String((m as any)._id) === String(req.params.messageId)
+      ) as any;
+      if (!msg) return res.status(404).json({ message: "Message not found" });
+
+      msg.reactions = msg.reactions || [];
+      const existing = msg.reactions.find(
+        (r: any) => String(r.user) === String((req as any).user._id)
+      );
+      if (existing) {
+        if (existing.type === type) {
+          msg.reactions = msg.reactions.filter(
+            (r: any) => String(r.user) !== String((req as any).user._id)
+          );
+        } else {
+          existing.type = type;
+        }
+      } else {
+        msg.reactions.push({ user: (req as any).user._id, type });
+      }
+
+      await q.save();
+      res.json(q);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+// Admin: React to the query (like/dislike)
+router.patch(
+  "/queries/:id/reactions",
+  isAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { type } = req.body;
+      if (!type || !["like", "dislike"].includes(type)) {
+        return res.status(400).json({ message: "Invalid reaction type" });
+      }
+
+      const q = await Query.findById(req.params.id);
+      if (!q) return res.status(404).json({ message: "Query not found" });
+
+      q.reactions = q.reactions || [];
+      const existing = q.reactions.find(
+        (r: any) => String(r.user) === String((req as any).user._id)
+      );
+      if (existing) {
+        if (existing.type === type) {
+          q.reactions = q.reactions.filter(
+            (r: any) => String(r.user) !== String((req as any).user._id)
+          );
+        } else {
+          existing.type = type;
+        }
+      } else {
+        q.reactions.push({ user: (req as any).user._id, type });
+      }
+
+      await q.save();
+      res.json(q);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -569,6 +1067,41 @@ router.patch(
     }
   }
 );
+
+// Delete query (admin only)
+router.delete("/queries/:id", isAdmin, async (req: Request, res: Response) => {
+  try {
+    const q = await Query.findById(req.params.id);
+    if (!q) return res.status(404).json({ message: "Query not found" });
+
+    const userId = (q as any).user_id?._id || (q as any).user_id;
+
+    // Delete the query
+    await Query.deleteOne({ _id: req.params.id });
+
+    // Silently notify the user's clients via WebSocket to remove the query from UI
+    // No announcement is created - the query is simply removed
+    try {
+      const wsServer = (global as any).__wsServer;
+      if (wsServer) {
+        const broadcastData = {
+          type: "QUERY_DELETED",
+          data: { queryId: req.params.id, userId },
+        };
+        const sent = wsServer.broadcast(broadcastData);
+        debug("Broadcasted QUERY_DELETED to clients", { sent, userId });
+      } else {
+        debug("WebSocket server not available for QUERY_DELETED");
+      }
+    } catch (wsErr) {
+      error("Failed to broadcast QUERY_DELETED:", wsErr);
+    }
+
+    res.json({ message: "Query deleted successfully" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // ========================
 // REVIEWS

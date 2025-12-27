@@ -5,6 +5,9 @@ import feedbackRouter from "./feedback";
 import fileHistoryRouter from "./file-history";
 import adminRouter from "./admin";
 import usersRouter from "./users";
+import attachmentsRouter from "./attachments";
+import contactRouter from "./contact";
+import { debug } from "../utils/logger.js";
 
 export function registerRoutes(app: Application) {
   const apiRouter = Router();
@@ -30,6 +33,13 @@ export function registerRoutes(app: Application) {
   // Mount feedback routes
   apiRouter.use("/feedback", feedbackRouter);
 
+  // Mount contact routes
+  apiRouter.use("/contact", contactRouter);
+
+  // Mount attachments upload routes
+  apiRouter.use("/attachments", attachmentsRouter);
+  debug("Mounted attachments router at /api/attachments");
+
   // Mount all routes under /api
   app.use("/api", apiRouter);
 
@@ -50,7 +60,7 @@ export function registerRoutes(app: Application) {
         });
       }
     });
-    console.debug("Registered API routes:", routes);
+    debug("Registered API routes:", routes);
   }
 
   return apiRouter;

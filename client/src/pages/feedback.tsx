@@ -11,6 +11,7 @@ import {
   MessageCircle,
   HelpCircle,
   Sparkles,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,13 @@ const feedbackTypes = [
     icon: Lightbulb,
     color: "text-amber-500",
     bg: "bg-amber-50",
+  },
+  {
+    value: "Performance",
+    label: "Performance",
+    icon: Zap,
+    color: "text-purple-500",
+    bg: "bg-purple-50",
   },
   {
     value: "Question",

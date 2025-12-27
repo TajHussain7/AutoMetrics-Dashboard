@@ -1,5 +1,6 @@
 import { Server as HTTPServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import { debug, info, isDev } from "./utils/logger.js";
 
 interface BroadcastMessage {
   type: string;
@@ -9,22 +10,22 @@ interface BroadcastMessage {
 class AnnouncementWebSocketServer {
   private wss: WebSocketServer;
   private clients: Set<WebSocket> = new Set();
-  private debugMode = true;
+  private debugMode = isDev;
 
   constructor() {
-    console.info("🔧 Starting Announcement WebSocket server on port 8081...");
+    info("🔧 Starting Announcement WebSocket server");
 
     this.wss = new WebSocketServer({ port: 8081 });
 
-    console.info("✅ Announcement WS running at ws://localhost:8081");
+    info("✅ Announcement WS running");
 
     if (this.debugMode) {
-      console.debug("✅ WebSocketServer created");
+      debug("✅ WebSocketServer created");
     }
 
     this.wss.on("connection", (ws: WebSocket) => {
       const clientCount = this.clients.size + 1;
-      console.debug(`\n🔗 [CLIENT CONNECTED] Total clients: ${clientCount}`);
+      debug(`\n🔗 [CLIENT CONNECTED] Total clients: ${clientCount}`);
 
       this.clients.add(ws);
 
@@ -35,7 +36,7 @@ class AnnouncementWebSocketServer {
           message: "Connected to announcement server",
         });
         ws.send(welcomeMsg);
-        console.debug(`   └─ Welcome message sent to client`);
+        debug(`   └─ Welcome message sent to client`);
       } catch (sendErr) {
         console.error(`   └─ Failed to send welcome message:`, sendErr);
       }
@@ -44,7 +45,7 @@ class AnnouncementWebSocketServer {
       ws.on("message", (message: string) => {
         try {
           const data = JSON.parse(message);
-          console.debug(`   ├─ Message received: ${data.type || "UNKNOWN"}`);
+          debug(`   ├─ Message received: ${data.type || "UNKNOWN"}`);
         } catch (parseErr) {
           console.error(
             `   ├─ Failed to parse message (${message.length} bytes):`,
@@ -57,9 +58,7 @@ class AnnouncementWebSocketServer {
       ws.on("close", () => {
         this.clients.delete(ws);
         const remaining = this.clients.size;
-        console.debug(
-          `\n❌ [CLIENT DISCONNECTED] Remaining clients: ${remaining}`
-        );
+        debug(`\n❌ [CLIENT DISCONNECTED] Remaining clients: ${remaining}`);
       });
 
       // Handle WebSocket errors
@@ -67,7 +66,7 @@ class AnnouncementWebSocketServer {
         console.error(`\n⚠️  [WS ERROR]`, err.message);
         this.clients.delete(ws);
         const remaining = this.clients.size;
-        console.debug(`   └─ Removed client. Remaining: ${remaining}`);
+        debug(`   └─ Removed client. Remaining: ${remaining}`);
       });
     });
 
@@ -76,14 +75,12 @@ class AnnouncementWebSocketServer {
       console.error("❌ [WS SERVER ERROR]", err);
     });
 
-    console.info("✅ WebSocket server ready");
+    info("✅ WebSocket server ready");
   }
 
   broadcast(message: BroadcastMessage): number {
     if (this.clients.size === 0) {
-      console.debug(
-        `⚠️  [BROADCAST] No clients connected, message not sent (type: ${message.type})`
-      );
+      debug(`No clients connected, message not sent`, { type: message.type });
       return 0;
     }
 
@@ -92,7 +89,7 @@ class AnnouncementWebSocketServer {
     let skipCount = 0;
     let errorCount = 0;
 
-    console.debug(
+    debug(
       `\n📢 [BROADCAST] Sending "${message.type}" to ${this.clients.size} client(s)`
     );
 
@@ -100,7 +97,7 @@ class AnnouncementWebSocketServer {
     this.clients.forEach((client) => {
       i++;
       if (client.readyState !== WebSocket.OPEN) {
-        console.debug(`   ├─ [${i}] ⊘ Skipped (state: ${client.readyState})`);
+        debug(`   ├─ [${i}] ⊘ Skipped (state: ${client.readyState})`);
         skipCount++;
         return;
       }
@@ -113,7 +110,7 @@ class AnnouncementWebSocketServer {
           } else {
             successCount++;
             if (this.debugMode) {
-              console.debug(`   ├─ [${i}] ✓ Sent successfully`);
+              debug(`   ├─ [${i}] ✓ Sent successfully`);
             }
           }
         });
@@ -126,7 +123,7 @@ class AnnouncementWebSocketServer {
       }
     });
 
-    console.debug(
+    debug(
       `   └─ Summary: ✓${successCount} ✗${errorCount} ⊘${skipCount}/${this.clients.size}`
     );
 

@@ -5,6 +5,7 @@ import { BaseEntity } from "./types";
 export enum FeedbackType {
   BugReport = "Bug Report",
   Suggestion = "Suggestion",
+  Performance = "Performance",
   Question = "Question",
   Other = "Other",
 }

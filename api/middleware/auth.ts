@@ -46,6 +46,32 @@ export const authenticateToken = async (
   }
 };
 
+// Middleware that requires the authenticated user's account to be active.
+// Allows login (auth route) but blocks mutation actions when a user is deactivated.
+export const requireActiveUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = req.user as any;
+    if (!user)
+      return res.status(401).json({ message: "Authentication required" });
+
+    // Treat explicit 'inactive' status as blocked
+    if (user.status === "inactive") {
+      return res
+        .status(403)
+        .json({ message: "Account deactivated", code: "ACCOUNT_DEACTIVATED" });
+    }
+
+    next();
+  } catch (err) {
+    console.error("requireActiveUser middleware error:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const checkRole = (roles: string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {

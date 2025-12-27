@@ -83,6 +83,13 @@ export type FlightStatus = "Coming" | "Gone" | "Cancelled";
 export function getFlightStatus(
   row: Pick<TravelData, "flying_date" | "flight_status">
 ): FlightStatus {
+  // prefer the explicit flight_status field (DB canonical)
+  // fall back to any optional flying_status alias if present
+  const status = (row as any).flight_status ?? (row as any).flying_status;
+
+  // If user explicitly set status to Cancelled, respect it regardless of date
+  if (status === "Cancelled") return "Cancelled";
+
   if (!row.flying_date || row.flying_date.trim() === "") {
     return "Coming";
   }
@@ -92,14 +99,11 @@ export function getFlightStatus(
     return "Coming";
   }
 
-  // If the date has passed, always return "Gone" regardless of user-set status
+  // If the date has passed, return "Gone"
   if (new Date() > date) {
     return "Gone";
   }
 
-  // For future dates, allow user to set status to "Cancelled", default to "Coming"
-  // prefer the explicit flight_status field (DB canonical)
-  // fall back to any optional flying_status alias if present
-  const status = (row as any).flight_status ?? (row as any).flying_status;
-  return status === "Cancelled" ? "Cancelled" : "Coming";
+  // Default: future dates are Coming
+  return "Coming";
 }

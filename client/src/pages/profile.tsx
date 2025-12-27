@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
+import { error } from "@/lib/logger";
 import {
   Card,
   CardContent,
@@ -82,7 +83,7 @@ export default function ProfilePage() {
           status: data.status || "",
         });
       } catch (err) {
-        console.error("Profile load failed:", err);
+        error("Profile load failed:", err);
         toast({
           title: "Error",
           description: "Failed to load profile",
@@ -146,7 +147,7 @@ export default function ProfilePage() {
           variant: "default",
         });
       } catch (err) {
-        console.error("Field update failed:", err);
+        error("Field update failed:", err);
         setFieldErrors((prev) => ({
           ...prev,
           [field]:
@@ -211,7 +212,7 @@ export default function ProfilePage() {
       }, 1000);
       navigate("/dashboard");
     } catch (err) {
-      console.error("Profile save failed:", err);
+      error("Profile save failed:", err);
       toast({
         title: "Error",
         description:
@@ -256,7 +257,7 @@ export default function ProfilePage() {
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      console.error("Avatar upload failed:", err);
+      error("Avatar upload failed:", err);
       toast({
         title: "Error",
         description: "Failed to upload avatar",

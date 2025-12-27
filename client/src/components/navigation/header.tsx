@@ -11,8 +11,8 @@ interface HeaderProps {
 export default function Header({ title, breadcrumb }: HeaderProps) {
   return (
     <div className="bg-white shadow-sm border-b border-slate-200">
-      <div className="px-6 py-4">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+      <div className="px-6">
+        <div className="max-w-[1600px] mx-auto flex h-16 items-center justify-between">
           {/* Left Section — Logo and Title */}
           <div className="flex items-center space-x-3">
             <motion.div

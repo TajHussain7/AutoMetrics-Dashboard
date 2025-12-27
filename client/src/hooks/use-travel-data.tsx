@@ -4,6 +4,7 @@ import type { TravelData, UploadResponse, UploadSession } from "@shared/schema";
 import { FlightStatus, PaymentStatus, TravelDataBase } from "@shared/types";
 import type { MongoTravelData } from "@shared/mongodb-types";
 import { useTravelData as useTravelDataContext } from "@/contexts/travel-data-context";
+import { error } from "@/lib/logger";
 
 export function useUploadFile() {
   const queryClient = useQueryClient();
@@ -212,7 +213,7 @@ export function useCreateTravelData() {
       const mongoResponse = await response.json();
 
       if (!response.ok) {
-        console.error("Server error response:", mongoResponse);
+        error("Server error response:", mongoResponse);
         throw new Error(
           mongoResponse.message || "Failed to create travel data"
         );

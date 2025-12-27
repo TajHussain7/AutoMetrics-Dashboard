@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { error } from "@/lib/logger";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,8 +23,8 @@ export function ProtectedDataTable() {
   const { user } = useAuth();
 
   const handleRefresh = useCallback(() => {
-    refetch().catch((error: Error) => {
-      console.error("Failed to refresh data:", error);
+    refetch().catch((err: Error) => {
+      error("Failed to refresh data:", err);
     });
   }, [refetch]);
 

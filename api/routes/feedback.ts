@@ -2,19 +2,15 @@ import { Router } from "express";
 import { authenticateToken } from "../middleware/auth";
 import { feedbackSchema, FeedbackStatus } from "@shared/feedback-schema";
 import { Feedback } from "../models/feedback";
+import { debug } from "../utils/logger.js";
 
 const feedbackRouter = Router();
 
 console.info("🚨 feedback router loaded");
 
-// Debug middleware
+// Debug middleware (minimal, non-sensitive info only)
 feedbackRouter.use((req, res, next) => {
-  console.debug(`[Feedback Route] ${req.method} ${req.path}`, {
-    body: req.body,
-    headers: req.headers,
-    url: req.originalUrl,
-    baseUrl: req.baseUrl,
-  });
+  debug(`[Feedback Route] ${req.method} ${req.path}`);
   next();
 });
 
@@ -24,13 +20,13 @@ feedbackRouter.post("/", async (req, res) => {
   res.setHeader("Content-Type", "application/json");
 
   try {
-    console.debug("Received feedback request:", req.body);
+    debug("Received feedback request");
     const feedbackData = feedbackSchema.parse(req.body);
-    console.debug("Parsed feedback data:", feedbackData);
+    debug("Parsed feedback data");
 
     // Get user ID if authenticated, otherwise set to null
     const userId = req.user?._id || null;
-    console.debug("Creating feedback with user:", userId);
+    debug("Creating feedback with user:", userId);
 
     const feedback = new Feedback({
       ...feedbackData,
@@ -39,7 +35,7 @@ feedbackRouter.post("/", async (req, res) => {
     });
 
     await feedback.save();
-    console.debug("Feedback saved successfully:", feedback._id);
+    debug("Feedback saved successfully:", feedback._id);
 
     const response = {
       success: true,
@@ -52,7 +48,7 @@ feedbackRouter.post("/", async (req, res) => {
       },
     };
 
-    console.debug("Sending response:", response);
+    debug("Sending response:", response);
     return res.status(201).json(response);
   } catch (error) {
     console.error("Error submitting feedback:", error);
@@ -135,6 +131,34 @@ feedbackRouter.patch("/:id/status", authenticateToken, async (req, res) => {
       success: false,
       message: "Failed to update feedback status",
     });
+  }
+});
+
+// Public: Get recent feedback entries (lightweight, includes user profile if available)
+feedbackRouter.get("/recent", async (req, res) => {
+  try {
+    const limit = Math.max(
+      1,
+      Math.min(20, parseInt(String(req.query.limit || "4"), 10))
+    );
+    const feedback = await Feedback.find()
+      .sort({ created_at: -1 })
+      .limit(limit)
+      .populate("user_id", "fullName avatar");
+
+    const transformed = feedback.map((f: any) => ({
+      _id: f._id,
+      name: f.user_id?.fullName || f.name || "Anonymous",
+      avatar: f.user_id?.avatar || undefined,
+      created_at: f.created_at,
+    }));
+
+    res.status(200).json({ success: true, feedback: transformed });
+  } catch (err: any) {
+    console.error("Error fetching recent feedback:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch recent feedback" });
   }
 });
 

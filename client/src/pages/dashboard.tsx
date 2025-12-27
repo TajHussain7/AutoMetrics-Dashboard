@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import TopNav from "@/components/navigation/top-nav";
 import Footer from "@/components/navigation/footer";
 import FileUpload from "@/components/dashboard/file-upload";
 import SummaryCards from "@/components/dashboard/summary-cards";
 import FeedbackPrompt from "@/components/dashboard/feedback";
 import EnhancedDataTable from "@/components/data-table/enhanced-data-table";
-import ChartsGrid from "@/components/analytics/charts-grid";
+const ChartsGrid = lazy(() => import("@/components/analytics/charts-grid"));
 import ExportOptions from "@/components/export/export-options";
 import History from "@/pages/history";
 import { useTravelData } from "@/contexts/travel-data-context";
@@ -119,7 +119,17 @@ export default function Dashboard() {
       case "data-table":
         return <EnhancedDataTable />;
       case "analytics":
-        return <ChartsGrid />;
+        return (
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center min-h-[200px]">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+              </div>
+            }
+          >
+            <ChartsGrid />
+          </Suspense>
+        );
       case "export":
         return <ExportOptions />;
       case "history":

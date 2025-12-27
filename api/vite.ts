@@ -5,6 +5,7 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { debug } from "./utils/logger.js";
 
 const viteLogger = createLogger();
 
@@ -16,7 +17,7 @@ export function log(message: string, source = "express") {
     hour12: true,
   });
 
-  console.debug(`${formattedTime} [${source}] ${message}`);
+  debug(`${formattedTime} [${source}] ${message}`);
 }
 
 export async function setupVite(app: Express, server: Server) {
@@ -47,10 +48,10 @@ export async function setupVite(app: Express, server: Server) {
 
     // Skip Vite middleware for API routes - let them be handled by API handlers
     if (url.startsWith("/api") || url.startsWith("/api/")) {
-      console.debug(`[Vite Middleware] Skipping for API route: ${url}`);
+      log(`[Vite Middleware] Skipping for API route: ${url}`);
       return next();
     }
-    console.debug(`[Vite Middleware] Serving HTML for: ${url}`);
+    log(`[Vite Middleware] Serving HTML for: ${url}`);
 
     try {
       const clientTemplate = path.resolve(

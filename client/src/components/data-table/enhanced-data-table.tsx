@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/auth-context";
+import { debug, error as errorLogger } from "@/lib/logger";
 import { BlurOverlay } from "@/components/auth/blur-overlay";
 import { Badge } from "@/components/ui/badge";
 import { useTravelData } from "@/contexts/travel-data-context";
@@ -212,7 +213,7 @@ export default function EnhancedDataTable() {
           }
           return dateStr;
         } catch (error) {
-          console.error("Error formatting date:", error);
+          errorLogger("Error formatting date:", error);
           return dateStr;
         }
       },
@@ -300,7 +301,7 @@ export default function EnhancedDataTable() {
           const mongoId = row.id;
 
           if (!mongoId) {
-            console.error("MongoDB _id not found for row:", rowId);
+            errorLogger("MongoDB _id not found for row:", rowId);
             toast({
               title: "Update Error",
               description: "Could not find database ID for this record.",
@@ -323,12 +324,9 @@ export default function EnhancedDataTable() {
 
           delete updateTimersRef.current[rowId];
 
-          console.debug(
-            `Rates updated for row ${rowId} (MongoDB ID: ${mongoId}):`,
-            updates
-          );
+          debug(`Rates updated for row ${rowId} (MongoDB ID: ${mongoId})`);
         } catch (error) {
-          console.error("Error updating rates immediately:", error);
+          errorLogger("Error updating rates immediately:", error);
 
           toast({
             title: "Error",
@@ -438,7 +436,7 @@ export default function EnhancedDataTable() {
         });
       }
     } catch (error) {
-      console.error("Error updating rates:", error);
+      errorLogger("Error updating rates:", error);
       toast({
         title: "Error",
         description: "Failed to update rates. Please try again.",
@@ -972,7 +970,7 @@ export default function EnhancedDataTable() {
 
                         setAddOpen(false);
                       } catch (error) {
-                        console.error("Error adding new entry:", error);
+                        errorLogger("Error adding new entry:", error);
                         toast({
                           title: "Error",
                           description:
@@ -1076,7 +1074,7 @@ export default function EnhancedDataTable() {
                       return;
                     }
 
-                    console.debug("Deleting travel-data ids:", idsToDelete);
+                    debug("Deleting travel-data ids:", idsToDelete);
 
                     await Promise.all(
                       idsToDelete.map((id) => deleteMutation.mutateAsync(id))
@@ -1091,7 +1089,7 @@ export default function EnhancedDataTable() {
                       duration: 3000,
                     });
                   } catch (error) {
-                    console.error("Delete entries error:", error);
+                    errorLogger("Delete entries error:", error);
                     toast({
                       title: "Error",
                       description:
