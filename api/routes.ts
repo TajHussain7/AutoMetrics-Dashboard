@@ -589,13 +589,13 @@ function processStandardTravelData(
   };
 }
 
-import authRoutes from "./routes/auth";
-import adminRoutes from "./routes/admin";
-import userRoutes from "./routes/users";
-import fileHistoryRouter from "./routes/file-history";
-import attachmentsRouter from "./routes/attachments";
-import feedbackRouter from "./routes/feedback"; // Added to mount feedback endpoints
-import contactRouter from "./routes/contact";
+import authRoutes from "./routes/auth.js";
+import adminRoutes from "./routes/admin.js";
+import userRoutes from "./routes/users.js";
+import fileHistoryRouter from "./routes/file-history.js";
+import attachmentsRouter from "./routes/attachments.js";
+import feedbackRouter from "./routes/feedback.js"; // Added to mount feedback endpoints
+import contactRouter from "./routes/contact.js";
 import mongoose from "mongoose";
 
 export async function registerRoutes(app: Express) {

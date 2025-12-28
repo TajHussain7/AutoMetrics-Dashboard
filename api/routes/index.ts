@@ -4,7 +4,7 @@ import { travelDataRouter } from "./travel-data.js";
 import feedbackRouter from "./feedback.js";
 import fileHistoryRouter from "./file-history.js";
 import adminRouter from "./admin.js";
-import usersRouter from "./users";
+import usersRouter from "./users.js";
 import attachmentsRouter from "./attachments.js";
 import contactRouter from "./contact.js";
 import { debug } from "../utils/logger.js";

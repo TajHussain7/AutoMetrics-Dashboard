@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { FileStatus } from "@shared/upload-schema";
+import { FileStatus } from "@shared/upload-schema.js";
 
 const fileSchema = new mongoose.Schema({
   user_id: {

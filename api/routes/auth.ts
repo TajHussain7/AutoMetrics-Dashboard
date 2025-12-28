@@ -16,8 +16,8 @@ async function createAndSendOtp(
   purpose: "email_verification" | "reset_password" = "email_verification"
 ) {
   const bcrypt = await import("bcryptjs");
-  const { EmailVerification } = await import("../models/emailVerification");
-  const { sendVerificationEmail } = await import("../utils/resend-email");
+  const { EmailVerification } = await import("../models/emailVerification.js");
+  const { sendVerificationEmail } = await import("../utils/resend-email.js");
 
   const otp = generateOtp();
   const salt = await bcrypt.genSalt(10);
@@ -117,7 +117,9 @@ router.post("/resend-otp", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const { EmailVerification } = await import("../models/emailVerification");
+    const { EmailVerification } = await import(
+      "../models/emailVerification.js"
+    );
     const existing = await EmailVerification.findOne({
       userId: user._id,
       email,
@@ -174,7 +176,9 @@ router.post("/reset-password", async (req, res) => {
         .status(400)
         .json({ message: "Email, OTP and new password are required" });
 
-    const { EmailVerification } = await import("../models/emailVerification");
+    const { EmailVerification } = await import(
+      "../models/emailVerification.js"
+    );
     const bcrypt = await import("bcryptjs");
     const verification = await EmailVerification.findOne({
       email,
@@ -247,7 +251,9 @@ router.post("/verify-email", async (req, res) => {
     if (!email || !otp)
       return res.status(400).json({ message: "Email and OTP are required" });
 
-    const { EmailVerification } = await import("../models/emailVerification");
+    const { EmailVerification } = await import(
+      "../models/emailVerification.js"
+    );
     const bcrypt = await import("bcryptjs");
     const verification = await EmailVerification.findOne({ email }).sort({
       createdAt: -1,
