@@ -1,6 +1,6 @@
-import { File } from "../models/file";
-import { FileData } from "../models/file-data";
-import { FileStatus, type UploadedFileBase } from "@shared/upload-schema";
+import { File } from "../models/file.js";
+import { FileData } from "../models/file-data.js";
+import { FileStatus, type UploadedFileBase } from "@shared/upload-schema.js";
 
 export class FileStorage {
   async getFileHistoryForUser(userId: string) {

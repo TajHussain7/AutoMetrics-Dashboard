@@ -6,10 +6,7 @@ export async function sendVerificationEmail(
   purpose: "email_verification" | "reset_password" = "email_verification"
 ) {
   const from =
-    process.env.SMTP_FROM ||
-    process.env.RESEND_FROM ||
-    process.env.ADMIN_EMAIL ||
-    "no-reply@example.com";
+    process.env.SMTP_FROM || process.env.ADMIN_EMAIL || "no-reply@example.com";
 
   // Use SMTP if configured
   const smtpHost = process.env.SMTP_HOST;
@@ -229,26 +226,8 @@ export async function sendVerificationEmail(
     }
   }
 
-  if (process.env.RESEND_API_KEY) {
-    try {
-      const { Resend } = await import("resend");
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      const resp = await resend.emails.send({
-        from,
-        to,
-        subject,
-        html,
-      });
-      debug("Resend send result:", resp);
-      return { provider: "resend", id: (resp as any).id || null };
-    } catch (err) {
-      console.error("Failed to send verification email via Resend:", err);
-      throw err;
-    }
-  }
-
   const err = new Error(
-    "No email provider configured: set SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS or RESEND_API_KEY"
+    "No email provider configured: set SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS. "
   );
   console.error(err.message);
   throw err;

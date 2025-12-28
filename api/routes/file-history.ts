@@ -1,7 +1,7 @@
 import express from "express";
-import { TravelData } from "../models/travel-data";
-import { UploadSession } from "../models/upload-session";
-import { authenticateToken, requireActiveUser } from "../middleware/auth";
+import { TravelData } from "../models/travel-data.js";
+import { UploadSession } from "../models/upload-session.js";
+import { authenticateToken, requireActiveUser } from "../middleware/auth.js";
 import { debug } from "../utils/logger.js";
 
 const router = express.Router();

@@ -1,9 +1,9 @@
 import { Router } from "express";
 import multer from "multer";
-import { authenticateToken, requireActiveUser } from "../middleware/auth";
-import { fileStorage } from "../storage/file-storage";
-import { FileStatus, uploadedFileSchema } from "@shared/upload-schema";
-import { processExcelData } from "../excel-processor";
+import { authenticateToken, requireActiveUser } from "../middleware/auth.js";
+import { fileStorage } from "../storage/file-storage.js";
+import { FileStatus, uploadedFileSchema } from "@shared/upload-schema.js";
+import { processExcelData } from "../excel-processor.js";
 
 const router = Router();
 

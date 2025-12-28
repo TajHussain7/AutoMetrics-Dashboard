@@ -3,20 +3,20 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import * as XLSX from "xlsx";
 // Use MongoDB-backed models for uploads/travel data instead of filesystem storage
-import { UploadSession } from "./models/upload-session";
-import { TravelData } from "./models/travel-data";
+import { UploadSession } from "./models/upload-session.js";
+import { TravelData } from "./models/travel-data.js";
 import {
   insertTravelDataSchema,
   updateTravelDataSchema,
   insertUploadSessionSchema,
   type UploadResponse,
-} from "@shared/schema";
-import { FlightStatus, PaymentStatus } from "@shared/types";
-import { normalizeDate } from "./utils";
+} from "@shared/schema.js";
+import { FlightStatus, PaymentStatus } from "@shared/types.js";
+import { normalizeDate } from "./utils.js";
 import jwt from "jsonwebtoken";
-import { User } from "./models/user";
+import { User } from "./models/user.js";
 import "./types/express.d.ts";
-import { authenticateToken, requireActiveUser } from "./middleware/auth";
+import { authenticateToken, requireActiveUser } from "./middleware/auth.js";
 import "dotenv/config";
 import { debug } from "./utils/logger.js";
 

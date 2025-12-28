@@ -1,9 +1,9 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { User } from "../models/user";
-import { authenticateToken, requireActiveUser } from "../middleware/auth";
+import { User } from "../models/user.js";
+import { authenticateToken, requireActiveUser } from "../middleware/auth.js";
 import { debug } from "../utils/logger.js";
-import { Query } from "../models/query";
-import { Announcement } from "../models/announcement";
+import { Query } from "../models/query.js";
+import { Announcement } from "../models/announcement.js";
 
 const router = Router();
 

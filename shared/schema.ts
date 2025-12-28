@@ -4,7 +4,7 @@ import {
   PaymentStatus,
   TravelDataBase,
   UploadSessionBase,
-} from "./types";
+} from "./types.js";
 
 // Re-export types for convenience
 export type {

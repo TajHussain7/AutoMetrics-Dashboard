@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BaseEntity } from "./types";
+import { BaseEntity } from "./types.js";
 
 export enum FileStatus {
   Active = "active",

@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { authenticateToken } from "../middleware/auth";
-import { feedbackSchema, FeedbackStatus } from "@shared/feedback-schema";
-import { Feedback } from "../models/feedback";
+import { authenticateToken } from "../middleware/auth.js";
+import { feedbackSchema, FeedbackStatus } from "@shared/feedback-schema.js";
+import { Feedback } from "../models/feedback.js";
 import { debug } from "../utils/logger.js";
 
 const feedbackRouter = Router();

@@ -1,12 +1,12 @@
 import { Router, Application } from "express";
-import { fileRouter } from "./files";
-import { travelDataRouter } from "./travel-data";
-import feedbackRouter from "./feedback";
-import fileHistoryRouter from "./file-history";
-import adminRouter from "./admin";
+import { fileRouter } from "./files.js";
+import { travelDataRouter } from "./travel-data.js";
+import feedbackRouter from "./feedback.js";
+import fileHistoryRouter from "./file-history.js";
+import adminRouter from "./admin.js";
 import usersRouter from "./users";
-import attachmentsRouter from "./attachments";
-import contactRouter from "./contact";
+import attachmentsRouter from "./attachments.js";
+import contactRouter from "./contact.js";
 import { debug } from "../utils/logger.js";
 
 export function registerRoutes(app: Application) {

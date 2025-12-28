@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BaseEntity } from "./types";
+import { BaseEntity } from "./types.js";
 
 // Feedback type and status enums
 export enum FeedbackType {

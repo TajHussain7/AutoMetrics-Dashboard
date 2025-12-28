@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
-import { normalizeDate } from "./utils";
-import type { UploadResponse } from "@shared/schema";
+import { normalizeDate } from "./utils.js";
+import type { UploadResponse } from "@shared/schema.js";
 
 interface ParsedRow {
   date: string;

@@ -1,20 +1,20 @@
 import { Router, Request, Response } from "express";
-import { User } from "../models/user";
-import { Announcement } from "../models/announcement";
-import { Query } from "../models/query";
-import { Review } from "../models/review";
-import { File } from "../models/file";
-import { FileData } from "../models/file-data";
-import { UploadSession } from "../models/upload-session";
-import { TravelData } from "../models/travel-data";
-import { Feedback } from "../models/feedback";
-import { Contact } from "../models/contact";
-import { EmailVerification } from "../models/emailVerification";
+import { User } from "../models/user.js";
+import { Announcement } from "../models/announcement.js";
+import { Query } from "../models/query.js";
+import { Review } from "../models/review.js";
+import { File } from "../models/file.js";
+import { FileData } from "../models/file-data.js";
+import { UploadSession } from "../models/upload-session.js";
+import { TravelData } from "../models/travel-data.js";
+import { Feedback } from "../models/feedback.js";
+import { Contact } from "../models/contact.js";
+import { EmailVerification } from "../models/emailVerification.js";
 import {
   isAdmin,
   authenticateToken,
   requireActiveUser,
-} from "../middleware/auth";
+} from "../middleware/auth.js";
 import { debug, info, warn, error } from "../utils/logger.js";
 import fs from "fs";
 import path from "path";
