@@ -1,13 +1,9 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
 import { debug } from "./utils/logger.js";
-
-const viteLogger = createLogger();
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -21,6 +17,31 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  // Lazily import Vite and the project vite config to avoid compile-time errors
+  // in environments where devDependencies (like `vite`) are not installed.
+  let createViteServer: any;
+  let viteLogger: any = undefined;
+  let viteConfig: any = {};
+
+  try {
+    const viteMod = await import("vite");
+    createViteServer = viteMod.createServer;
+    viteLogger = viteMod.createLogger ? viteMod.createLogger() : undefined;
+
+    // Try to load project vite config (may not exist in server-only installs)
+    try {
+      // dynamic import prevents TS from needing the module at compile time
+      viteConfig = (await import("../vite.config.ts")).default;
+    } catch {
+      viteConfig = {};
+    }
+  } catch (err) {
+    // Re-throw to keep behavior consistent if setupVite is called but vite isn't available
+    throw new Error(
+      "Vite is not available in this environment. Ensure dev dependencies are installed or do not call setupVite in production."
+    );
+  }
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
@@ -31,9 +52,10 @@ export async function setupVite(app: Express, server: Server) {
     ...viteConfig,
     configFile: false,
     customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        viteLogger.error(msg, options);
+      ...(viteLogger || {}),
+      // Use 'any' for parameters to avoid implicit any when LogOptions isn't available
+      error: (msg: any, options?: any) => {
+        viteLogger?.error?.(msg, options);
         process.exit(1);
       },
     },
