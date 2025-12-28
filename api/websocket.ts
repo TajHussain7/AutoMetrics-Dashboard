@@ -1,5 +1,5 @@
 import { Server as HTTPServer } from "http";
-import { WebSocketServer, WebSocket } from "ws";
+import * as ws from "ws";
 import { debug, info, isDev } from "./utils/logger.js";
 
 interface BroadcastMessage {
@@ -8,14 +8,14 @@ interface BroadcastMessage {
 }
 
 class AnnouncementWebSocketServer {
-  private wss: WebSocketServer;
-  private clients: Set<WebSocket> = new Set();
+  private wss: any;
+  private clients: Set<InstanceType<typeof import("ws")>> = new Set();
   private debugMode = isDev;
 
   constructor(server: HTTPServer) {
     info("🔧 Starting Announcement WebSocket server");
 
-    this.wss = new WebSocketServer({ server, path: "/ws/announcements" });
+    this.wss = new ws.WebSocketServer({ server, path: "/ws/announcements" });
 
     info("✅ Announcement WS running");
 
@@ -23,11 +23,11 @@ class AnnouncementWebSocketServer {
       debug("✅ WebSocketServer created");
     }
 
-    this.wss.on("connection", (ws: WebSocket) => {
+    this.wss.on("connection", (client: InstanceType<typeof import("ws")>) => {
       const clientCount = this.clients.size + 1;
       debug(`\n🔗 [CLIENT CONNECTED] Total clients: ${clientCount}`);
 
-      this.clients.add(ws);
+      this.clients.add(client);
 
       // Send welcome message
       try {
@@ -35,43 +35,54 @@ class AnnouncementWebSocketServer {
           type: "CONNECTED",
           message: "Connected to announcement server",
         });
-        ws.send(welcomeMsg);
+        client.send(welcomeMsg);
         debug(`   └─ Welcome message sent to client`);
       } catch (sendErr) {
         console.error(`   └─ Failed to send welcome message:`, sendErr);
       }
 
       // Handle incoming messages from client
-      ws.on("message", (message: string) => {
-        try {
-          const data = JSON.parse(message);
-          debug(`   ├─ Message received: ${data.type || "UNKNOWN"}`);
-        } catch (parseErr) {
-          console.error(
-            `   ├─ Failed to parse message (${message.length} bytes):`,
-            parseErr
-          );
+      client.on(
+        "message",
+        (message: Buffer | ArrayBuffer | Buffer[] | string) => {
+          try {
+            const text =
+              typeof message === "string"
+                ? message
+                : Buffer.from(message as any).toString();
+            const data = JSON.parse(text);
+            debug(`   ├─ Message received: ${data.type || "UNKNOWN"}`);
+          } catch (parseErr) {
+            const len =
+              typeof message === "string"
+                ? message.length
+                : Buffer.from(message as any).length;
+            console.error(
+              `   ├─ Failed to parse message (${len} bytes):`,
+              parseErr
+            );
+          }
         }
-      });
+      );
 
       // Handle client disconnect
-      ws.on("close", () => {
-        this.clients.delete(ws);
+      client.on("close", () => {
+        this.clients.delete(client);
         const remaining = this.clients.size;
         debug(`\n❌ [CLIENT DISCONNECTED] Remaining clients: ${remaining}`);
       });
 
       // Handle WebSocket errors
-      ws.on("error", (err) => {
+      client.on("error", (err: Error) => {
         console.error(`\n⚠️  [WS ERROR]`, err.message);
-        this.clients.delete(ws);
+        this.clients.delete(client);
         const remaining = this.clients.size;
         debug(`   └─ Removed client. Remaining: ${remaining}`);
       });
     });
 
     // Server-level error handling
-    this.wss.on("error", (err) => {
+    this.wss.on("error", (err: Error) => {
       console.error("❌ [WS SERVER ERROR]", err);
     });
 
@@ -96,14 +107,14 @@ class AnnouncementWebSocketServer {
     let i = 0;
     this.clients.forEach((client) => {
       i++;
-      if (client.readyState !== WebSocket.OPEN) {
+      if (client.readyState !== ws.OPEN) {
         debug(`   ├─ [${i}] ⊘ Skipped (state: ${client.readyState})`);
         skipCount++;
         return;
       }
 
       try {
-        client.send(payload, (err) => {
+        client.send(payload, (err?: Error) => {
           if (err) {
             console.error(`   ├─ [${i}] ✗ Send failed:`, err.message);
             errorCount++;
