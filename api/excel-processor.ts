@@ -133,6 +133,16 @@ export function processExcelData(
     totalRecords: processedRows.length,
     openingBalance,
     entries: processedRows,
+    // Additional summary fields required by shared UploadResponse type
+    parsedRows: processedRows.length,
+    totalRows: processedRows.length,
+    summary: {
+      totalBookings: processedRows.length,
+      totalRevenue: processedRows.reduce((s, r) => s + (r.debit || 0), 0),
+      totalExpenses: processedRows.reduce((s, r) => s + (r.credit || 0), 0),
+      comingFlights: processedRows.filter((r) => r.flying_status === "Coming")
+        .length,
+    },
   };
 }
 

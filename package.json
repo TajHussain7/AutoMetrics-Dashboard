@@ -7,7 +7,7 @@
     "dev": "tsx api/app.ts",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
-    "build": "npm run build:client",
+    "build": "npm run build:server && npm run build:client",
     "preview": "vite preview --host",
     "check": "tsc",
     "start": "node dist/api/app.js",

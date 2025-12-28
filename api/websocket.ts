@@ -12,10 +12,10 @@ class AnnouncementWebSocketServer {
   private clients: Set<WebSocket> = new Set();
   private debugMode = isDev;
 
-  constructor() {
+  constructor(server: HTTPServer) {
     info("🔧 Starting Announcement WebSocket server");
 
-    this.wss = new WebSocketServer({ port: 8081 });
+    this.wss = new WebSocketServer({ server, path: "/ws/announcements" });
 
     info("✅ Announcement WS running");
 

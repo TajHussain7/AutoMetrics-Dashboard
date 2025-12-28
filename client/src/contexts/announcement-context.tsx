@@ -44,9 +44,9 @@ export function AnnouncementProvider({
 
     // Use a Vite-provided env var when available so deployments can configure the
     // announcements WebSocket URL. Falls back to the local dev server.
-    const WS_URL =
-      (import.meta as any).env?.VITE_ANNOUNCEMENTS_WS_URL ??
-      "ws://localhost:8081";
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const WS_URL = `${protocol}://${window.location.host}/ws/announcements`;
+
     try {
       const ws = new WebSocket(WS_URL);
       wsRef.current = ws;

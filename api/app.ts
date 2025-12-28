@@ -116,7 +116,7 @@ async function main() {
   const server = createServer(app);
 
   // Initialize WebSocket server for real-time announcements
-  const wsServer = new AnnouncementWebSocketServer();
+  const wsServer = new AnnouncementWebSocketServer(server);
 
   (global as any).__wsServer = wsServer;
   info("✅ WebSocket server initialized for announcements");
