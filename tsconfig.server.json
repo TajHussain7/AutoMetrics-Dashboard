@@ -1,18 +1,14 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false,
-    "module": "esnext",
-    "allowImportingTsExtensions": false,
-    "moduleResolution": "node",
-    "target": "es2017",
-    "lib": ["es2017"],
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "rootDir": ".",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "types": ["node"],
+    "skipLibCheck": true
   },
-  "include": ["api/**/*", "server/**/*", "shared/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["api/**/*.ts", "shared/**/*.ts"],
+  "exclude": ["client", "node_modules"]
 }
