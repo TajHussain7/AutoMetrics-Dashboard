@@ -6,7 +6,6 @@ import { createServer } from "http";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic } from "./vite.js";
 import AnnouncementWebSocketServer from "./websocket.js";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -125,20 +124,22 @@ async function main() {
   app.use("/uploads", express.static(path.resolve(__dirname, "uploads")));
 
   if (process.env.NODE_ENV !== "production") {
-    // In dev, use Vite middleware so frontend HMR and backend run on same port
+    const { setupVite } = await import("./vite.js");
     await setupVite(app, server);
+
     server.listen(port, () => {
-      info(`Dev server running`);
+      info("Dev server running");
       debug("Environment:", {
         NODE_ENV: process.env.NODE_ENV,
         PORT: port,
       });
     });
   } else {
-    // In production, serve static built client
+    const { serveStatic } = await import("./vite.js");
     serveStatic(app);
+
     server.listen(port, () => {
-      info(`Server running`);
+      info("Server running");
     });
   }
 }
