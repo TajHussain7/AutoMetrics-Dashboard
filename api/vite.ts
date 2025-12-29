@@ -5,6 +5,10 @@ import { type Server } from "http";
 import { nanoid } from "nanoid";
 import { debug } from "./utils/logger.js";
 
+if (process.env.NODE_ENV === "production") {
+  throw new Error("api/vite.ts must not be imported in production");
+}
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",

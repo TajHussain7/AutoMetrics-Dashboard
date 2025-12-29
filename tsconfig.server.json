@@ -13,5 +13,5 @@
     "allowJs": false
   },
   "include": ["api/**/*.ts", "shared/**/*.ts", "third-party.d.ts"],
-  "exclude": ["client", "node_modules"]
+  "exclude": ["client", "node_modules", "api/vite.ts", "vite.config.ts"]
 }
