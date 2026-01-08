@@ -247,8 +247,9 @@ router.post("/reset-password", async (req, res) => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000,
+      path: "/",
     });
 
     const userData = {
@@ -322,8 +323,9 @@ router.post("/verify-email", async (req, res) => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000,
+      path: "/",
     });
 
     const userData = {
@@ -372,7 +374,7 @@ router.post("/login", async (req, res) => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax", // Can use "lax" now since we're on same domain
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: "/",
     });
