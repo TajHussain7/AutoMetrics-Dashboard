@@ -3,7 +3,7 @@ services:
     name: autometrics-backend
     env: node
     buildCommand: npm install && npm run build:server
-    startCommand: npm start
+    startCommand: npm run start:prod
     envVars:
       - key: NODE_ENV
         value: production
