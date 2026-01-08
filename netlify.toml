@@ -1,4 +1,0 @@
-[build]
-  base = "."
-  command = "npm run build:client"
-  publish = "dist/public"
