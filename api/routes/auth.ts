@@ -76,8 +76,25 @@ router.post("/register", async (req, res) => {
 
     await user.save();
 
-    // Send verification OTP to the user's email
-    await createAndSendOtp(user);
+    // Check if email is configured before sending OTP
+    const emailConfigured = !!(
+      process.env.SMTP_HOST &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASS
+    );
+
+    if (emailConfigured) {
+      // Send verification OTP to the user's email
+      await createAndSendOtp(user);
+    } else {
+      // If email is not configured, auto-verify the user (development/testing only)
+      console.warn(
+        "⚠️ Email not configured. Auto-verifying user for testing purposes."
+      );
+      user.isVerified = true;
+      user.emailVerifiedAt = new Date();
+      await user.save();
+    }
 
     // Return user data (excluding password) and indicate verification is required
     const userData = {
@@ -89,7 +106,11 @@ router.post("/register", async (req, res) => {
       isVerified: user.isVerified,
     };
 
-    const resp: any = { user: userData, verificationSent: true };
+    const resp: any = {
+      user: userData,
+      verificationSent: emailConfigured,
+      autoVerified: !emailConfigured,
+    };
 
     res.status(201).json(resp);
   } catch (error: any) {
