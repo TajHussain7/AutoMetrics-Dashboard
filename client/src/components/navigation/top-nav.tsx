@@ -16,6 +16,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAnnouncements } from "@/contexts/announcement-context";
 import { error as errorLogger } from "@/lib/logger";
 
+function getApiUrl(path: string): string {
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  return apiBase ? `${apiBase}${path}` : path;
+}
+
 type ScreenType =
   | "dashboard"
   | "data-table"
@@ -66,7 +71,7 @@ export default function TopNav({ activeScreen, onScreenChange }: TopNavProps) {
 
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`/api/users/${user.id}`, {
+        const res = await fetch(getApiUrl(`/api/users/${user.id}`), {
           credentials: "include",
         });
         if (!res.ok) return;

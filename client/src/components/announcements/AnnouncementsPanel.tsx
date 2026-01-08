@@ -220,11 +220,14 @@ export default function AnnouncementsPanel() {
       const already = announcements.find((a) => a._id === id && a.read);
       if (already) return;
 
-      const res = await fetch(`/api/users/announcements/${id}/read`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await fetch(
+        getApiUrl(`/api/users/announcements/${id}/read`),
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
       if (!res.ok) throw new Error("Failed to mark read");
 
       setAnnouncements((prev) => {

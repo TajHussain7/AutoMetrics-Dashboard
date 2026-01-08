@@ -28,6 +28,11 @@ import {
   Save,
 } from "lucide-react";
 
+function getApiUrl(path: string): string {
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  return apiBase ? `${apiBase}${path}` : path;
+}
+
 export default function ProfilePage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -36,7 +41,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const updateTimeoutRef = useRef<number | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
   const [isSaving, setIsSaving] = useState(false);
 
@@ -66,7 +71,7 @@ export default function ProfilePage() {
 
     const load = async () => {
       try {
-        const response = await fetch(`/api/users/${user.id}`, {
+        const response = await fetch(getApiUrl(`/api/users/${user.id}`), {
           credentials: "include",
         });
         if (!response.ok) throw new Error("Failed to load profile");
@@ -125,7 +130,7 @@ export default function ProfilePage() {
 
     updateTimeoutRef.current = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/users/${user.id}/field`, {
+        const response = await fetch(getApiUrl(`/api/users/${user.id}/field`), {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -178,7 +183,7 @@ export default function ProfilePage() {
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/users/${user.id}`, {
+      const response = await fetch(getApiUrl(`/api/users/${user.id}`), {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -233,14 +238,17 @@ export default function ProfilePage() {
       reader.onloadend = async () => {
         const base64 = reader.result as string;
 
-        const response = await fetch(`/api/users/${user.id}/avatar`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ avatar: base64 }),
-        });
+        const response = await fetch(
+          getApiUrl(`/api/users/${user.id}/avatar`),
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({ avatar: base64 }),
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Failed to upload avatar to server");

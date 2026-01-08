@@ -109,13 +109,16 @@ export function FileHistory() {
   const handleRestore = async (sessionId: string) => {
     try {
       debug("Restoring session:", sessionId);
-      const response = await fetch(`/api/files/${sessionId}/restore`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        getApiUrl(`/api/files/${sessionId}/restore`),
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       // Read raw text once to avoid "body stream already read" errors
       const rawText = await response.text();

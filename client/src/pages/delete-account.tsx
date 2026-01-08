@@ -5,6 +5,11 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { useLocation } from "wouter";
 
+function getApiUrl(path: string): string {
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  return apiBase ? `${apiBase}${path}` : path;
+}
+
 export default function DeleteAccountConfirm() {
   const { user, signOut } = useAuth();
   const [, navigate] = useLocation();
@@ -23,7 +28,7 @@ export default function DeleteAccountConfirm() {
       return;
     }
     try {
-      const res = await fetch(`/api/users/${user.id}/delete`, {
+      const res = await fetch(getApiUrl(`/api/users/${user.id}/delete`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
