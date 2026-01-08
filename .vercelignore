@@ -1,10 +1,10 @@
 # Ignore backend/server files - backend is deployed on Render
 api/
-dist/api/
-dist/shared/
-shared/
 
-# Ignore config files
+# Ignore build outputs that aren't needed
+dist/api/
+
+# Ignore server config files
 tsconfig.server.json
 render.yaml
 
@@ -13,5 +13,5 @@ node_modules/
 .env
 .env.*
 
-# Keep only the built frontend
-!dist/public/
+# Keep shared/ folder (needed by frontend)
+# Keep dist/public/ (build output)
