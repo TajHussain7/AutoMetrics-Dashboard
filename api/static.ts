@@ -7,7 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "..", "dist", "public");
+  // From dist/api/static.js, go up to dist/, then into public/
+  const distPath = path.resolve(__dirname, "..", "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
