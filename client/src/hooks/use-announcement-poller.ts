@@ -30,9 +30,12 @@ export function useAnnouncementPoller({
 
   const fetchUnreadCount = useCallback(async (): Promise<number> => {
     try {
-      const res = await fetch(getApiUrl("/api/users/announcements/unread-count"), {
-        credentials: "include",
-      });
+      const res = await fetch(
+        getApiUrl("/api/users/announcements/unread-count"),
+        {
+          credentials: "include",
+        }
+      );
 
       if (!res.ok) {
         error("Failed to fetch unread count:", res.status);

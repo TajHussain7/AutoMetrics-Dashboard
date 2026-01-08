@@ -34,11 +34,11 @@ const getBaseURL = () => {
   return apiBase ? `${apiBase}/api` : "/api";
 };
 
-const api = axios.create({ 
+const api = axios.create({
   get baseURL() {
     return getBaseURL();
   },
-  withCredentials: true 
+  withCredentials: true,
 });
 
 export const queriesApi = {

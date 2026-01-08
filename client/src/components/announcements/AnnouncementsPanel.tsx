@@ -176,9 +176,12 @@ export default function AnnouncementsPanel() {
     setLoading(true);
     try {
       setError(null);
-      const res = await fetch(getApiUrl("/api/users/announcements?page=1&limit=10"), {
-        credentials: "include",
-      });
+      const res = await fetch(
+        getApiUrl("/api/users/announcements?page=1&limit=10"),
+        {
+          credentials: "include",
+        }
+      );
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");

@@ -113,7 +113,9 @@ export function useTravelDataBySession(
       if (!sessionId) return { data: [], total: 0, totalPages: 0 };
 
       const response = await fetch(
-        getApiUrl(`/api/travel-data/${sessionId}?page=${page}&pageSize=${pageSize}`)
+        getApiUrl(
+          `/api/travel-data/${sessionId}?page=${page}&pageSize=${pageSize}`
+        )
       );
       if (!response.ok) {
         throw new Error("Failed to fetch travel data");
