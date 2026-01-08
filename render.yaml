@@ -2,8 +2,8 @@ services:
   - type: web
     name: autometrics-backend
     env: node
-    buildCommand: npm install && npm run build:server
-    startCommand: npm run start:prod
+    buildCommand: npm install && npm run build:server && ls -la dist/api/
+    startCommand: node dist/api/app.js
     envVars:
       - key: NODE_ENV
         value: production
