@@ -1,0 +1,17 @@
+# Ignore backend/server files - backend is deployed on Render
+api/
+dist/api/
+dist/shared/
+shared/
+
+# Ignore config files
+tsconfig.server.json
+render.yaml
+
+# Ignore development files
+node_modules/
+.env
+.env.*
+
+# Keep only the built frontend
+!dist/public/
