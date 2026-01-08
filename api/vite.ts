@@ -35,6 +35,7 @@ export async function setupVite(app: Express, server: Server) {
     // Try to load project vite config (may not exist in server-only installs)
     try {
       // dynamic import prevents TS from needing the module at compile time
+      // @ts-ignore - dynamic import of .ts file only works in dev with tsx/vite
       viteConfig = (await import("../vite.config.ts")).default;
     } catch {
       viteConfig = {};

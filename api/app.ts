@@ -135,7 +135,7 @@ async function main() {
       });
     });
   } else {
-    const { serveStatic } = await import("./vite.js");
+    const { serveStatic } = await import("./static.js");
     serveStatic(app);
 
     server.listen(port, () => {
