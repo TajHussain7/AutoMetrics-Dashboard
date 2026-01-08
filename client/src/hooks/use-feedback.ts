@@ -3,6 +3,11 @@ import { FeedbackFormData, FeedbackResponse } from "@shared/feedback-schema";
 import { useToast } from "./use-toast";
 import { debug, error } from "@/lib/logger";
 
+function getApiUrl(path: string): string {
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  return apiBase ? `${apiBase}${path}` : path;
+}
+
 export function useFeedback() {
   const { toast } = useToast();
 
@@ -12,7 +17,7 @@ export function useFeedback() {
         debug("Submitting feedback data:", data);
 
         // Use relative API path instead of absolute URL
-        const response = await fetch("/api/feedback", {
+        const response = await fetch(getApiUrl("/api/feedback"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

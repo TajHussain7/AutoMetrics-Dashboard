@@ -49,13 +49,18 @@ export function FileHistory() {
   const { setTravelData, setCurrentSessionId } = useTravelData();
   const { toast } = useToast();
 
+  const getApiUrl = (path: string) => {
+    const apiBase = import.meta.env.VITE_API_URL ?? "";
+    return apiBase ? `${apiBase}${path}` : path;
+  };
+
   useEffect(() => {
     fetchFileHistory();
   }, []);
 
   const fetchFileHistory = async () => {
     try {
-      const response = await fetch("/api/files/history", {
+      const response = await fetch(getApiUrl("/api/files/history"), {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch file history");
@@ -76,7 +81,7 @@ export function FileHistory() {
   const handleDelete = async (sessionId: string) => {
     try {
       setDeletingId(sessionId);
-      const response = await fetch(`/api/files/${sessionId}`, {
+      const response = await fetch(getApiUrl(`/api/files/${sessionId}`), {
         method: "DELETE",
         credentials: "include",
       });

@@ -2,6 +2,11 @@ import { useEffect, useRef, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { error } from "@/lib/logger";
 
+function getApiUrl(path: string): string {
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  return apiBase ? `${apiBase}${path}` : path;
+}
+
 interface UseAnnouncementPollerOptions {
   pollInterval?: number; // milliseconds, default 45 seconds
   enabled?: boolean;
@@ -25,7 +30,7 @@ export function useAnnouncementPoller({
 
   const fetchUnreadCount = useCallback(async (): Promise<number> => {
     try {
-      const res = await fetch("/api/users/announcements/unread-count", {
+      const res = await fetch(getApiUrl("/api/users/announcements/unread-count"), {
         credentials: "include",
       });
 

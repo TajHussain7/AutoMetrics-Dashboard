@@ -17,10 +17,17 @@ interface AuthResponse {
 }
 
 class AuthService {
-  private baseUrl = "/api/auth";
+  private getBaseUrl() {
+    const apiBase = import.meta.env.VITE_API_URL ?? "";
+    return apiBase ? `${apiBase}/api/auth` : "/api/auth";
+  }
+
   private axiosInstance = axios.create({
     withCredentials: true,
-    baseURL: this.baseUrl,
+    get baseURL() {
+      const apiBase = import.meta.env.VITE_API_URL ?? "";
+      return apiBase ? `${apiBase}/api/auth` : "/api/auth";
+    },
   });
 
   async signIn(email: string, password: string): Promise<AuthResponse> {

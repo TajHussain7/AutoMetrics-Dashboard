@@ -189,7 +189,9 @@ function RequestReactivationButton() {
           user.full_name || user.email
         }) requests account reactivation. Please review and reactivate if appropriate.`,
       };
-      const res = await fetch("/api/contact", {
+      const apiBase = import.meta.env.VITE_API_URL ?? "";
+      const apiUrl = apiBase ? `${apiBase}/api/contact` : "/api/contact";
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

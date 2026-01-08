@@ -146,12 +146,17 @@ export default function AnnouncementsPage() {
     }
   };
 
+  const getApiUrl = (path: string) => {
+    const apiBase = import.meta.env.VITE_API_URL ?? "";
+    return apiBase ? `${apiBase}${path}` : path;
+  };
+
   const uploadAttachment = async (file: File) => {
     try {
       setUploading(true);
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/attachments/upload", {
+      const res = await fetch(getApiUrl("/api/attachments/upload"), {
         method: "POST",
         body: fd,
         credentials: "include",

@@ -167,11 +167,16 @@ export default function AnnouncementsPanel() {
       window.removeEventListener("query:deleted", handleQueryDeleted);
   }, [setUnreadCount]);
 
+  const getApiUrl = (path: string) => {
+    const apiBase = import.meta.env.VITE_API_URL ?? "";
+    return apiBase ? `${apiBase}${path}` : path;
+  };
+
   async function fetchAnnouncements() {
     setLoading(true);
     try {
       setError(null);
-      const res = await fetch("/api/users/announcements?page=1&limit=10", {
+      const res = await fetch(getApiUrl("/api/users/announcements?page=1&limit=10"), {
         credentials: "include",
       });
 

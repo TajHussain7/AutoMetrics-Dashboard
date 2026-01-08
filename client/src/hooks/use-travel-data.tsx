@@ -6,6 +6,11 @@ import type { MongoTravelData } from "@shared/mongodb-types";
 import { useTravelData as useTravelDataContext } from "@/contexts/travel-data-context";
 import { error } from "@/lib/logger";
 
+function getApiUrl(path: string): string {
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  return apiBase ? `${apiBase}${path}` : path;
+}
+
 export function useUploadFile() {
   const queryClient = useQueryClient();
   const {
@@ -25,7 +30,7 @@ export function useUploadFile() {
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
       try {
-        const response = await fetch("/api/upload", {
+        const response = await fetch(getApiUrl("/api/upload"), {
           method: "POST",
           body: formData,
           signal: controller.signal,
@@ -108,7 +113,7 @@ export function useTravelDataBySession(
       if (!sessionId) return { data: [], total: 0, totalPages: 0 };
 
       const response = await fetch(
-        `/api/travel-data/${sessionId}?page=${page}&pageSize=${pageSize}`
+        getApiUrl(`/api/travel-data/${sessionId}?page=${page}&pageSize=${pageSize}`)
       );
       if (!response.ok) {
         throw new Error("Failed to fetch travel data");
@@ -243,7 +248,7 @@ export function useUploadSessions() {
   return useQuery<UploadSession[]>({
     queryKey: ["/api/upload-sessions"],
     queryFn: async () => {
-      const response = await fetch("/api/upload-sessions");
+      const response = await fetch(getApiUrl("/api/upload-sessions"));
       if (!response.ok) {
         throw new Error("Failed to fetch upload sessions");
       }

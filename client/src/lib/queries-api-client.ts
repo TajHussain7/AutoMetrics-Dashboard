@@ -29,7 +29,17 @@ export interface QueryItem {
   reactions?: Array<{ user: string; type: "like" | "dislike" }>;
 }
 
-const api = axios.create({ baseURL: "/api", withCredentials: true });
+const getBaseURL = () => {
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  return apiBase ? `${apiBase}/api` : "/api";
+};
+
+const api = axios.create({ 
+  get baseURL() {
+    return getBaseURL();
+  },
+  withCredentials: true 
+});
 
 export const queriesApi = {
   async uploadAttachment(file: File): Promise<Attachment> {
