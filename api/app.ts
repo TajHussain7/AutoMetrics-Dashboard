@@ -135,11 +135,18 @@ async function main() {
       });
     });
   } else {
-    const { serveStatic } = await import("./static.js");
-    serveStatic(app);
+    // Only serve static files if dist/public exists (full-stack mode)
+    // Skip if frontend is deployed separately (e.g., on Vercel)
+    const { serveStatic, hasStaticFiles } = await import("./static.js");
+    if (hasStaticFiles()) {
+      serveStatic(app);
+      info("Serving static files from dist/public");
+    } else {
+      info("API-only mode: frontend deployed separately");
+    }
 
     server.listen(port, () => {
-      info("Server running");
+      info(`Server running on port ${port}`);
     });
   }
 }

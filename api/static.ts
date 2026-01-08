@@ -6,10 +6,15 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export function serveStatic(app: Express) {
-  // From dist/api/static.js, go up to dist/, then into public/
-  const distPath = path.resolve(__dirname, "..", "public");
+// From dist/api/static.js, go up to dist/, then into public/
+const distPath = path.resolve(__dirname, "..", "public");
 
+// Check if static files exist (for API-only vs full-stack mode)
+export function hasStaticFiles(): boolean {
+  return fs.existsSync(distPath);
+}
+
+export function serveStatic(app: Express) {
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the client build directory: ${distPath}. Make sure to build the client first (from the project root run: "npm run build" or "npm run build:client").`
