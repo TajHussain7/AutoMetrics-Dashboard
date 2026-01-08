@@ -1,5 +1,4 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
     "outDir": "dist",
@@ -12,15 +11,9 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowJs": false,
-    "allowImportingTsExtensions": false
+    "strict": true,
+    "declaration": false
   },
-  "include": ["api/**/*.ts", "shared/**/*.ts", "third-party.d.ts"],
-  "exclude": [
-    "client",
-    "node_modules",
-    "**/vite.ts",
-    "**/vite.config.ts",
-    "vite.config.ts",
-    "api/vite.ts"
-  ]
+  "include": ["api/**/*.ts", "shared/**/*.ts"],
+  "exclude": ["client", "node_modules", "dist", "api/vite.ts", "vite.config.ts"]
 }

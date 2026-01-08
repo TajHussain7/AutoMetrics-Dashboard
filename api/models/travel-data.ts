@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { FlightStatus, PaymentStatus } from "@shared/types.js";
+import { FlightStatus, PaymentStatus } from "../../shared/types.js";
 
 const travelDataSchema = new mongoose.Schema({
   session_id: { type: String, index: true },

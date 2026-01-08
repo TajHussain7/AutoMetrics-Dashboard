@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { Contact } from "../models/contact.js";
-import { contactSchema } from "@shared/contact-schema.js";
+import { contactSchema } from "../../shared/contact-schema.js";
 import { authenticateToken } from "../middleware/auth.js";
 import nodemailer from "nodemailer";
 import { debug } from "../utils/logger.js";

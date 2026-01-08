@@ -10,12 +10,12 @@ import {
   updateTravelDataSchema,
   insertUploadSessionSchema,
   type UploadResponse,
-} from "@shared/schema.js";
-import { FlightStatus, PaymentStatus } from "@shared/types.js";
+} from "../shared/schema.js";
+import { FlightStatus, PaymentStatus } from "../shared/types.js";
 import { normalizeDate } from "./utils.js";
 import jwt from "jsonwebtoken";
 import { User } from "./models/user.js";
-import "./types/express.d.ts";
+// Type augmentation for Express - used for type checking only, not imported at runtime
 import { authenticateToken, requireActiveUser } from "./middleware/auth.js";
 import "dotenv/config";
 import { debug } from "./utils/logger.js";

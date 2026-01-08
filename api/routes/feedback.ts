@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/auth.js";
-import { feedbackSchema, FeedbackStatus } from "@shared/feedback-schema.js";
+import {
+  feedbackSchema,
+  FeedbackStatus,
+} from "../../shared/feedback-schema.js";
 import { Feedback } from "../models/feedback.js";
 import { debug } from "../utils/logger.js";
 

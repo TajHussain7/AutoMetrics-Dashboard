@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticateToken, requireActiveUser } from "../middleware/auth.js";
-import { TravelData, updateTravelDataSchema } from "@shared/schema.js";
+import { TravelData, updateTravelDataSchema } from "../../shared/schema.js";
 import { db } from "../db.js";
 import type { Collection } from "mongodb";
 import { ObjectId } from "mongodb";
