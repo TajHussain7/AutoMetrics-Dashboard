@@ -37,7 +37,15 @@ async function initializeDefaultAdmin() {
     // Check if admin already exists
     const existingAdmin = await User.findOne({ email: adminEmail });
     if (existingAdmin) {
-      info("✅ Default admin already exists:", adminEmail);
+      // Ensure existing admin is verified
+      if (!existingAdmin.isVerified) {
+        existingAdmin.isVerified = true;
+        existingAdmin.emailVerifiedAt = new Date();
+        await existingAdmin.save();
+        info("✅ Default admin verified:", adminEmail);
+      } else {
+        info("✅ Default admin already exists:", adminEmail);
+      }
       return;
     }
 
@@ -49,6 +57,8 @@ async function initializeDefaultAdmin() {
       role: "admin",
       status: "active",
       company_name: "AutoMetrics",
+      isVerified: true,
+      emailVerifiedAt: new Date(),
     });
 
     await defaultAdmin.save();

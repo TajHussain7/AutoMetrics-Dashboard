@@ -205,16 +205,29 @@ export async function sendVerificationEmail(
         user: smtpUser,
         pass: smtpPass,
       },
+      connectionTimeout: 10000, // 10 seconds timeout
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     });
 
     try {
-      const info = await transporter.sendMail({
+      // Add a race condition with timeout
+      const sendPromise = transporter.sendMail({
         from,
         to,
         subject,
         text,
         html,
       });
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Email sending timeout after 10 seconds")),
+          10000
+        )
+      );
+
+      const info = await Promise.race([sendPromise, timeoutPromise]);
       debug("SMTP send result:", {
         messageId: info.messageId,
         envelope: info.envelope,
