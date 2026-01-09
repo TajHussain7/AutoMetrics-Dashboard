@@ -37,7 +37,7 @@ export default function SummaryCards() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
       {cards.map((card, index) => {
         const Icon = card.icon;
         return (
@@ -49,20 +49,22 @@ export default function SummaryCards() {
               className={`absolute inset-0 bg-gradient-to-br ${card.accentColor} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
             />
 
-            <CardContent className="relative p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+            <CardContent className="relative" style={{ padding: "clamp(1rem, 3vw, 1.5rem)" }}>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-slate-500 mb-2 tracking-widest uppercase">
                     {card.title}
                   </p>
-                  <p className="text-4xl font-bold text-slate-900 tracking-tight">
+                  <p className="font-bold text-slate-900 tracking-tight truncate" style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)" }}>
                     {card.value}
                   </p>
                 </div>
                 <div
-                  className={`w-14 h-14 ${card.iconBg} rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                  className={`${card.iconBg} rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 shrink-0`}
+                  style={{ width: "clamp(3rem, 8vw, 3.5rem)", height: "clamp(3rem, 8vw, 3.5rem)" }}
                 >
-                  <Icon className={`${card.iconColor} h-7 w-7`} />
+                  <Icon className={`${card.iconColor}`} style={{ width: "clamp(1.5rem, 4vw, 1.75rem)", height: "clamp(1.5rem, 4vw, 1.75rem)" }} />
+                </div>
                 </div>
               </div>
             </CardContent>

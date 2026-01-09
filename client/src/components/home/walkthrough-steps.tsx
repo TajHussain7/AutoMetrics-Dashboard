@@ -88,7 +88,8 @@ function StepCard({
       onMouseLeave={() => setIsHovered(false)}
     >
       <Card
-        className={`relative p-8 h-full bg-white border border-slate-200 shadow-sm hover:shadow-xl hover:border-slate-300 transition-all duration-300 group overflow-hidden rounded-2xl`}
+        className={`relative h-full bg-white border border-slate-200 shadow-sm hover:shadow-xl hover:border-slate-300 transition-all duration-300 group rounded-2xl`}
+        style={{ padding: "clamp(1.5rem, 4vw, 2rem)", overflow: "hidden" }}
         data-testid={`walkthrough-step-${step.id}`}
       >
         {/* Gradient overlay on hover */}
@@ -140,42 +141,55 @@ export function WalkthroughSteps() {
   return (
     <section
       ref={ref}
-      className="py-20 md:py-10 bg-slate-50 relative overflow-hidden"
+      className="bg-slate-50 relative"
+      style={{ padding: "clamp(3rem, 8vw, 5rem) clamp(1rem, 5vw, 3rem)" }}
     >
       {/* Background decoration */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50 via-slate-50 to-slate-50" />
 
       {/* Horizontal flow line + circles */}
-      <div className="hidden md:flex items-center justify-between absolute left-0 right-0 top-[360px] z-0 px-24">
+      <div
+        className="hidden lg:flex items-center justify-between absolute left-0 right-0 z-0"
+        style={{
+          top: "clamp(300px, 40vh, 360px)",
+          paddingInline: "clamp(2rem, 6vw, 6rem)",
+        }}
+      >
         {/* Left Circle */}
-        <div className="w-4 h-4 bg-blue-500 rounded-full" />
+        <div className="w-4 h-4 bg-blue-500 rounded-full shrink-0" />
 
         {/* Line */}
         <div className="flex-1 h-[4px] bg-slate-300" />
 
         {/* Right Circle */}
-        <div className="w-4 h-4 bg-blue-500 rounded-full" />
+        <div className="w-4 h-4 bg-blue-500 rounded-full shrink-0" />
       </div>
 
-      <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 relative">
+      <div className="w-full max-w-7xl mx-auto relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          className="text-center mb-8 md:mb-12 lg:mb-16"
         >
           <span className="inline-block px-4 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-medium mb-4">
             Simple Process
           </span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-slate-900 text-balance">
+          <h2
+            className="font-bold mb-4 text-slate-900 text-balance"
+            style={{ fontSize: "clamp(1.875rem, 4vw, 3rem)" }}
+          >
             How it works
           </h2>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p
+            className="text-slate-600 max-w-2xl mx-auto"
+            style={{ fontSize: "clamp(1rem, 1.5vw, 1.125rem)" }}
+          >
             Three simple steps to transform your travel data into insights
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8 lg:gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {steps.map((step, index) => (
             <StepCard
               key={step.id}

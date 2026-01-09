@@ -5,16 +5,26 @@
 @tailwind utilities;
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-size: clamp(14px, 1vw, 16px);
   }
 
   body {
     @apply font-sans;
     letter-spacing: -0.011em;
+    margin: 0;
+    width: 100%;
+    min-height: 100vh;
   }
 
   h1,
@@ -24,6 +34,33 @@
   h5,
   h6 {
     @apply font-display font-semibold tracking-tight;
+  }
+
+  h1 {
+    font-size: clamp(1.8rem, 3vw, 3rem);
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 2.5vw, 2.4rem);
+  }
+
+  h3 {
+    font-size: clamp(1.25rem, 2vw, 1.875rem);
+  }
+
+  h4 {
+    font-size: clamp(1.125rem, 1.5vw, 1.5rem);
+  }
+
+  p {
+    font-size: clamp(1rem, 1.2vw, 1.1rem);
+  }
+
+  img,
+  video,
+  svg {
+    max-width: 100%;
+    height: auto;
   }
 }
 
@@ -494,7 +531,8 @@
 
 /* Professional spacing and layout utilities */
 .page-container {
-  @apply min-h-screen bg-slate-50 py-12;
+  @apply min-h-screen bg-slate-50;
+  padding: clamp(1rem, 3vw, 3rem) clamp(1rem, 5vw, 3rem);
 }
 
 .page-header {
@@ -509,72 +547,70 @@
   @apply text-slate-600;
 }
 
-/* Responsive container with 80% width */
-.responsive-80 {
-  width: 80%;
-  margin-left: auto;
-  margin-right: auto;
-  max-width: 100%;
+/* Responsive container system */
+.responsive-80,
+.container {
+  width: 100%;
+  max-width: min(100%, 1440px);
+  padding-inline: clamp(1rem, 5vw, 3rem);
+  margin-inline: auto;
+}
+
+@media (min-width: 768px) {
+  .responsive-80 {
+    width: 90%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-80 {
+    width: 85%;
+  }
+}
+
+@media (min-width: 1440px) {
+  .responsive-80 {
+    width: 80%;
+  }
 }
 
 /* ==========================================================
-   Demo visualization overrides (per user request)
-   - Force the main container to occupy 80% of the viewport width
-   - Prevent text from wrapping inside the container (single-line)
-   - Use ellipsis for overflowing text so layout stays tidy
-   Notes:
-   - This constrains layout for visualization purposes. Users can still
-     zoom their browser; preventing browser zoom is not possible from CSS.
-   - Applying nowrap widely will cause horizontal overflow; we use
-     overflow:hidden and text-overflow:ellipsis to keep the UI usable.
- ==========================================================
+   Responsive layout foundation
+   - Mobile-first approach
+   - Fluid containers that adapt from 320px to 4K
+   - No forced overflow:hidden on body/root
+==========================================================
 */
 
-.container {
-  max-width: 80vw !important;
-  width: 80vw !important;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Prevent wrapping inside the main container. Use ellipsis for overflow. */
-/* default: prevent wrapping inside most containers */
+/* Allow normal text wrapping by default */
 .container * {
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
-/* Exception: allow normal paragraph wrapping inside the Home page
-   - Keeps Home page paragraphs readable and not forced onto one line
-   - Also allow container children to wrap normally when inside `.home-page` */
-.home-page p,
-.home-page .container * {
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-}
-
-/* Ensure interactive elements like buttons keep their text on one line */
+/* Single-line elements */
 button,
 .btn,
-.button,
-.card,
-.Card {
-  white-space: nowrap !important;
+.button {
+  white-space: nowrap;
 }
 
-/* Table headers and cells should not wrap */
+/* Table cells */
 table th,
 table td {
-  white-space: nowrap !important;
+  white-space: nowrap;
 }
 
-/* Prevent root-level horizontal scrollbar by hiding overflow-x */
-html,
+/* Prevent horizontal scroll only when absolutely necessary */
+html {
+  overflow-x: clip;
+}
+
 body,
 #root {
-  overflow-x: hidden !important;
+  width: 100%;
+  min-width: 320px;
 }
 
 .prose img {

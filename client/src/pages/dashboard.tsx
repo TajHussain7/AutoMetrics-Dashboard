@@ -52,12 +52,18 @@ export default function Dashboard() {
             <SummaryCards />
 
             <div className="grid grid-cols-1 gap-4 items-start">
-              <div className="bg-white rounded-lg shadow-md border-0 p-4">
-                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center">
-                  <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full mr-3"></div>
+              <div
+                className="bg-white rounded-lg shadow-md border-0"
+                style={{ padding: "clamp(1rem, 3vw, 1.5rem)" }}
+              >
+                <h3
+                  className="font-bold text-slate-800 mb-4 md:mb-6 flex items-center flex-wrap"
+                  style={{ fontSize: "clamp(1rem, 2vw, 1.125rem)" }}
+                >
+                  <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full mr-3 shrink-0"></div>
                   Flight Status Overview
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                   <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex items-center space-x-3">
                       <div className="w-4 h-4 bg-green-500 rounded-full shadow-sm"></div>
@@ -143,8 +149,12 @@ export default function Dashboard() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100">
       <TopNav activeScreen={activeScreen} onScreenChange={setActiveScreen} />
 
-      <main className="flex-1 px-2 md:px-4 py-4 max-w-none" id="main-content">
-        <div>
+      <main
+        className="flex-1 w-full"
+        style={{ padding: "clamp(1rem, 3vw, 1.5rem) clamp(0.5rem, 2vw, 1rem)" }}
+        id="main-content"
+      >
+        <div className="w-full max-w-screen-2xl mx-auto">
           <div className="mb-4">
             <h1 className="text-2xl font-bold text-slate-900 mb-1">
               {SCREEN_TITLES[activeScreen]}

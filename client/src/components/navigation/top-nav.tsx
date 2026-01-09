@@ -97,26 +97,49 @@ export default function TopNav({ activeScreen, onScreenChange }: TopNavProps) {
 
   return (
     <div className="bg-white shadow-sm border-b border-slate-200">
-      <div className="px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div
+        style={{
+          padding: "clamp(0.75rem, 2vw, 1rem) clamp(1rem, 3vw, 1.5rem)",
+        }}
+      >
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="relative w-14 h-14 flex items-center justify-center">
+          <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
+            <div
+              className="relative flex items-center justify-center shrink-0"
+              style={{
+                width: "clamp(2.5rem, 8vw, 3.5rem)",
+                height: "clamp(2.5rem, 8vw, 3.5rem)",
+              }}
+            >
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl opacity-10"></div>
-              <Activity className="w-8 h-8 text-blue-600" strokeWidth={2.5} />
+              <Activity
+                className="text-blue-600"
+                strokeWidth={2.5}
+                style={{
+                  width: "clamp(1.5rem, 6vw, 2rem)",
+                  height: "clamp(1.5rem, 6vw, 2rem)",
+                }}
+              />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <div className="min-w-0">
+              <h1
+                className="font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent truncate"
+                style={{ fontSize: "clamp(1.25rem, 3vw, 1.5rem)" }}
+              >
                 AutoMetrics
               </h1>
-              <p className="text-sm text-slate-500">
+              <p
+                className="text-slate-500 truncate hidden sm:block"
+                style={{ fontSize: "clamp(0.75rem, 1.5vw, 0.875rem)" }}
+              >
                 Intelligent Travel Data Dashboard
               </p>
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <nav className="flex items-center space-x-1 bg-slate-100 rounded-xl p-1">
+          <nav className="flex items-center flex-wrap gap-1 bg-slate-100 rounded-xl p-1 w-full lg:w-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isActive = activeScreen === item.id;
@@ -126,14 +149,18 @@ export default function TopNav({ activeScreen, onScreenChange }: TopNavProps) {
                   key={item.id}
                   onClick={() => onScreenChange(item.id)}
                   className={cn(
-                    "flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium",
+                    "flex items-center gap-2 rounded-lg transition-all duration-200 text-sm font-medium",
+                    "px-2 py-1.5 sm:px-3 sm:py-2 md:px-4",
                     isActive
                       ? "bg-white text-blue-600 shadow-sm"
                       : "text-slate-600 hover:text-slate-800 hover:bg-white/50"
                   )}
+                  title={item.label}
                 >
-                  <Icon className="w-6 h-6" />
-                  <span className="hidden md:inline">{item.label}</span>
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
+                  <span className="hidden xl:inline truncate">
+                    {item.label}
+                  </span>
                 </button>
               );
             })}

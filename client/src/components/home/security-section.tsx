@@ -137,12 +137,13 @@ export function SecuritySection() {
   return (
     <section
       ref={ref}
-      className="py-20 md:py-10 bg-slate-50 relative overflow-hidden"
+      className="bg-slate-50 relative"
+      style={{ padding: "clamp(3rem, 8vw, 5rem) clamp(1rem, 5vw, 3rem)" }}
     >
       {/* Background decoration */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50 via-slate-50 to-slate-50" />
 
-      <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 relative">
+      <div className="w-full max-w-7xl mx-auto relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -156,27 +157,36 @@ export function SecuritySection() {
             </span>
           </div>
 
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
+            <div className="shrink-0">
               <Lottie
                 animationData={securityAnim}
                 loop
                 autoplay
-                style={{ width: 110, height: 110 }}
+                style={{
+                  width: "clamp(80px, 15vw, 110px)",
+                  height: "clamp(80px, 15vw, 110px)",
+                }}
               />
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-slate-900 text-balance">
+            <h2
+              className="font-bold mb-4 text-slate-900 text-balance text-center sm:text-left"
+              style={{ fontSize: "clamp(1.875rem, 4vw, 3rem)" }}
+            >
               Security & Trust
             </h2>
           </div>
 
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p
+            className="text-slate-600 max-w-2xl mx-auto"
+            style={{ fontSize: "clamp(1rem, 1.5vw, 1.125rem)" }}
+          >
             Your data security is our top priority. We use enterprise-grade
             protection to keep your information safe
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8 lg:gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {securityFeatures.map((feature, index) => (
             <FeatureCard
               key={feature.id}

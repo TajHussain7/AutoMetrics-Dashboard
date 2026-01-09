@@ -228,11 +228,15 @@ export function FieldExplanation() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section ref={ref} className="py-20 md:py-10 relative overflow-hidden">
+    <section
+      ref={ref}
+      className="relative"
+      style={{ padding: "clamp(3rem, 8vw, 5rem) clamp(1rem, 5vw, 3rem)" }}
+    >
       {/* Background decoration */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-slate-100 via-white to-white" />
 
-      <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 relative">
+      <div className="w-full max-w-7xl mx-auto relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -242,16 +246,22 @@ export function FieldExplanation() {
           <span className="inline-block px-4 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-medium mb-4">
             Smart Extraction
           </span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-slate-900 text-balance">
+          <h2
+            className="font-bold mb-4 text-slate-900 text-balance"
+            style={{ fontSize: "clamp(1.875rem, 4vw, 3rem)" }}
+          >
             What we extract
           </h2>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p
+            className="text-slate-600 max-w-2xl mx-auto"
+            style={{ fontSize: "clamp(1rem, 1.5vw, 1.125rem)" }}
+          >
             Our intelligent parser automatically identifies and extracts key
             fields from your travel ledgers
           </p>
         </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {fields.map((field, index) => (
             <FieldCard
               key={field.name}

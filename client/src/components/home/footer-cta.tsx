@@ -19,7 +19,10 @@ export function FooterCTA({ onGetStarted, onTryDemo }: FooterCTAProps) {
   ];
 
   return (
-    <section className="py-10 md:py-28 relative overflow-hidden">
+    <section
+      className="relative"
+      style={{ padding: "clamp(2.5rem, 8vw, 7rem) clamp(1rem, 5vw, 3rem)" }}
+    >
       <div className="absolute inset-0 bg-gradient-to-t from-blue-600/10 via-white to-white" />
       <div
         className="absolute inset-0 opacity-30"
@@ -29,7 +32,7 @@ export function FooterCTA({ onGetStarted, onTryDemo }: FooterCTAProps) {
         }}
       />
 
-      <div className="w-full relative mx-auto px-6 lg:px-12">
+      <div className="w-full relative mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -50,11 +53,17 @@ export function FooterCTA({ onGetStarted, onTryDemo }: FooterCTAProps) {
             </span>
           </motion.div>
 
-          <h2 className="text-3xl md:text-5xl font-bold mb-6 text-slate-900 text-balance">
+          <h2
+            className="font-bold mb-6 text-slate-900 text-balance"
+            style={{ fontSize: "clamp(1.875rem, 5vw, 3rem)" }}
+          >
             Ready to transform your travel data?
           </h2>
 
-          <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto text-pretty">
+          <p
+            className="text-slate-600 mb-10 max-w-2xl mx-auto text-pretty"
+            style={{ fontSize: "clamp(1rem, 1.8vw, 1.25rem)" }}
+          >
             Join thousands of travel professionals who trust TravelLedger Pro
             for their data processing needs
           </p>
@@ -67,25 +76,25 @@ export function FooterCTA({ onGetStarted, onTryDemo }: FooterCTAProps) {
               duration: shouldReduceMotion ? 0 : 0.5,
               delay: shouldReduceMotion ? 0 : 0.4,
             }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            className="flex flex-col sm:flex-row gap-4 justify-center items-stretch sm:items-center flex-wrap"
           >
             <Button
               size="lg"
               onClick={onGetStarted}
-              className="text-base px-8 py-6 min-w-[220px] bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 hover:-translate-y-0.5"
+              className="text-base px-8 py-6 w-full sm:w-auto sm:min-w-[220px] bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 hover:-translate-y-0.5"
               data-testid="button-get-started"
             >
               Get started — it's free
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="ml-2 h-5 w-5 shrink-0" />
             </Button>
             <Button
               size="lg"
               variant="outline"
               onClick={onTryDemo}
-              className="text-base px-8 py-6 min-w-[220px] border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl hover:border-slate-300 transition-all duration-300 hover:-translate-y-0.5 bg-transparent"
+              className="text-base px-8 py-6 w-full sm:w-auto sm:min-w-[220px] border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl hover:border-slate-300 transition-all duration-300 hover:-translate-y-0.5 bg-transparent"
               data-testid="button-upload-sample"
             >
-              <Upload className="mr-2 h-5 w-5" />
+              <Upload className="mr-2 h-5 w-5 shrink-0" />
               Upload sample
             </Button>
           </motion.div>

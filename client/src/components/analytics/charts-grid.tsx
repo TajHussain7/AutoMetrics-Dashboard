@@ -184,8 +184,11 @@ export default function ChartsGrid() {
         </Card>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        <motion.div variants={itemVariants} className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+        <motion.div
+          variants={itemVariants}
+          className="lg:col-span-2 xl:col-span-2"
+        >
           <Card className="h-full rounded-2xl border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
             <CardContent className="p-4 md:p-6 relative">

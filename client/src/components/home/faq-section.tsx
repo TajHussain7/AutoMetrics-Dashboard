@@ -41,10 +41,16 @@ export function FAQSection() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section className="relative py-20 md:py-10 overflow-hidden">
+    <section
+      className="relative overflow-hidden"
+      style={{ padding: "clamp(3rem, 8vw, 5rem) 0" }}
+    >
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50 via-white to-white" />
 
-      <div className="relative w-full max-w-4xl mx-auto px-6 md:px-12">
+      <div
+        className="relative w-full max-w-4xl mx-auto"
+        style={{ paddingInline: "clamp(1rem, 5vw, 3rem)" }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -59,20 +65,29 @@ export function FAQSection() {
             </span>
           </div>
 
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
+            <div className="shrink-0">
               <Lottie
                 animationData={faqAnim}
                 loop
                 autoplay
-                style={{ width: 150, height: 150 }}
+                style={{
+                  width: "clamp(100px, 20vw, 150px)",
+                  height: "clamp(100px, 20vw, 150px)",
+                }}
               />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 text-balance">
+            <h2
+              className="font-bold text-slate-900 text-balance text-center sm:text-left"
+              style={{ fontSize: "clamp(1.875rem, 4vw, 2.25rem)" }}
+            >
               Frequently Asked Questions
             </h2>
           </div>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto text-pretty">
+          <p
+            className="text-slate-600 max-w-2xl mx-auto text-pretty"
+            style={{ fontSize: "clamp(1rem, 1.5vw, 1.125rem)" }}
+          >
             Quick answers to common questions about our service
           </p>
         </motion.div>

@@ -1118,9 +1118,12 @@ export default function EnhancedDataTable() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl border-0 overflow-hidden rounded-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      <Card className="shadow-xl border-0 rounded-2xl">
+        <div
+          className="w-full"
+          style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}
+        >
+          <table className="w-full" style={{ minWidth: "1400px" }}>
             <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white">
               <tr>
                 <th className="w-12 px-4 py-5 text-left">
