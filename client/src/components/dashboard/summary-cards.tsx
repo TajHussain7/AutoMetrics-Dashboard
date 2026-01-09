@@ -49,22 +49,36 @@ export default function SummaryCards() {
               className={`absolute inset-0 bg-gradient-to-br ${card.accentColor} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
             />
 
-            <CardContent className="relative" style={{ padding: "clamp(1rem, 3vw, 1.5rem)" }}>
+            <CardContent
+              className="relative"
+              style={{ padding: "clamp(1rem, 3vw, 1.5rem)" }}
+            >
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-slate-500 mb-2 tracking-widest uppercase">
                     {card.title}
                   </p>
-                  <p className="font-bold text-slate-900 tracking-tight truncate" style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)" }}>
+                  <p
+                    className="font-bold text-slate-900 tracking-tight truncate"
+                    style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)" }}
+                  >
                     {card.value}
                   </p>
                 </div>
                 <div
                   className={`${card.iconBg} rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 shrink-0`}
-                  style={{ width: "clamp(3rem, 8vw, 3.5rem)", height: "clamp(3rem, 8vw, 3.5rem)" }}
+                  style={{
+                    width: "clamp(3rem, 8vw, 3.5rem)",
+                    height: "clamp(3rem, 8vw, 3.5rem)",
+                  }}
                 >
-                  <Icon className={`${card.iconColor}`} style={{ width: "clamp(1.5rem, 4vw, 1.75rem)", height: "clamp(1.5rem, 4vw, 1.75rem)" }} />
-                </div>
+                  <Icon
+                    className={`${card.iconColor}`}
+                    style={{
+                      width: "clamp(1.5rem, 4vw, 1.75rem)",
+                      height: "clamp(1.5rem, 4vw, 1.75rem)",
+                    }}
+                  />
                 </div>
               </div>
             </CardContent>
