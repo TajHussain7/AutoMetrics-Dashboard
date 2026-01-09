@@ -7,15 +7,19 @@ import { debug } from "../utils/logger.js";
 
 const router = Router();
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Create SMTP transporter only if credentials are configured
+let transporter: any = null;
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_PORT === "465",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+}
 
 // Public: submit contact message
 router.post("/", async (req, res) => {
@@ -99,11 +103,14 @@ router.patch("/:id/respond", authenticateToken, async (req, res) => {
     msg.response_at = new Date();
     await msg.save();
 
-    await transporter.sendMail({
-      from: `"Support Team" <${process.env.SMTP_USER}>`,
-      to: msg.email,
-      subject: `Re: ${msg.subject || "Your contact message"}`,
-      html: `
+    // Send email response if SMTP is configured
+    if (transporter) {
+      try {
+        await transporter.sendMail({
+          from: `"Support Team" <${process.env.SMTP_USER}>`,
+          to: msg.email,
+          subject: `Re: ${msg.subject || "Your contact message"}`,
+          html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -150,7 +157,15 @@ router.patch("/:id/respond", authenticateToken, async (req, res) => {
         </body>
         </html>
       `,
-    });
+        });
+        debug("Contact response email sent to:", msg.email);
+      } catch (emailErr) {
+        console.error("Failed to send contact response email:", emailErr);
+        // Continue even if email fails - the response was saved
+      }
+    } else {
+      console.warn("SMTP not configured - response saved but email not sent");
+    }
 
     res.json({ success: true, message: "Responded", msg });
   } catch (err: any) {

@@ -1,21 +1,14 @@
+import { Resend } from "resend";
 import { debug } from "./logger.js";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendVerificationEmail(
   to: string,
   otp: string,
   purpose: "email_verification" | "reset_password" = "email_verification"
 ) {
-  const from =
-    process.env.SMTP_FROM || process.env.ADMIN_EMAIL || "no-reply@example.com";
-
-  // Use SMTP if configured
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = process.env.SMTP_PORT
-    ? Number(process.env.SMTP_PORT)
-    : undefined;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  const smtpSecure = process.env.SMTP_SECURE === "true" || smtpPort === 465;
+  const from = "AutoMetrics <onboarding@resend.dev>"; // Use your verified domain with Resend
 
   const subject =
     purpose === "reset_password" ? "Password reset code" : "Verify your email";
@@ -194,54 +187,39 @@ export async function sendVerificationEmail(
       ? `Your password reset code is ${otp}. It expires in 10 minutes.`
       : `Your verification code is ${otp}. It expires in 10 minutes.`;
 
-  if (smtpHost && smtpPort && smtpUser && smtpPass) {
-    const nodemailer = (await import("nodemailer")).default as any;
-
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpSecure,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-      connectionTimeout: 10000, // 10 seconds timeout
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-    });
-
-    try {
-      // Add a race condition with timeout
-      const sendPromise = transporter.sendMail({
-        from,
-        to,
-        subject,
-        text,
-        html,
-      });
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Email sending timeout after 10 seconds")),
-          10000
-        )
-      );
-
-      const info = await Promise.race([sendPromise, timeoutPromise]);
-      debug("SMTP send result:", {
-        messageId: info.messageId,
-        envelope: info.envelope,
-      });
-      return { provider: "smtp", messageId: info.messageId };
-    } catch (err) {
-      console.error("Failed to send verification email via SMTP:", err);
-      throw err;
-    }
+  // Check if Resend API key is configured
+  if (!process.env.RESEND_API_KEY) {
+    const err = new Error(
+      "No email provider configured: RESEND_API_KEY is required in environment variables."
+    );
+    console.error(err.message);
+    throw err;
   }
 
-  const err = new Error(
-    "No email provider configured: set SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS. "
-  );
-  console.error(err.message);
-  throw err;
+  try {
+    const { data, error } = await resend.emails.send({
+      from,
+      to: [to],
+      subject,
+      html,
+      text,
+    });
+
+    if (error) {
+      console.error("Failed to send verification email via Resend:", error);
+      throw new Error(
+        `Email sending failed: ${error.message || "Unknown error"}`
+      );
+    }
+
+    debug("Resend API send result:", {
+      id: data?.id,
+      to,
+    });
+
+    return { provider: "resend", messageId: data?.id || "unknown" };
+  } catch (err: any) {
+    console.error("Failed to send verification email via Resend:", err);
+    throw new Error(`Email sending failed: ${err.message || "Unknown error"}`);
+  }
 }

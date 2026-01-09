@@ -77,11 +77,7 @@ router.post("/register", async (req, res) => {
     await user.save();
 
     // Check if email is configured before sending OTP
-    const emailConfigured = !!(
-      process.env.SMTP_HOST &&
-      process.env.SMTP_USER &&
-      process.env.SMTP_PASS
-    );
+    const emailConfigured = !!process.env.RESEND_API_KEY;
 
     if (emailConfigured) {
       // Send verification OTP to the user's email
