@@ -63,7 +63,12 @@ router.post(
       const outPath = path.join(uploadsDir, safeName);
       await fs.promises.writeFile(outPath, req.file.buffer);
 
-      const urlPath = `/uploads/${safeName}`;
+      // Generate absolute URL for attachments
+      const baseUrl =
+        process.env.BACKEND_URL ||
+        process.env.API_URL ||
+        `${req.protocol}://${req.get("host")}`;
+      const urlPath = `${baseUrl}/uploads/${safeName}`;
       res.json({
         filename: req.file.originalname,
         url: urlPath,
@@ -103,7 +108,12 @@ router.post(
       const outPath = path.join(uploadsDir, safeName);
       await fs.promises.writeFile(outPath, req.file.buffer);
 
-      const urlPath = `/uploads/${safeName}`;
+      // Generate absolute URL for attachments
+      const baseUrl =
+        process.env.BACKEND_URL ||
+        process.env.API_URL ||
+        `${req.protocol}://${req.get("host")}`;
+      const urlPath = `${baseUrl}/uploads/${safeName}`;
       res.json({
         filename: req.file.originalname,
         url: urlPath,

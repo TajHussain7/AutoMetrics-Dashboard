@@ -31,7 +31,9 @@ export default function AdminContacts() {
   const fetchMsgs = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(getApiUrl("/api/contact"));
+      const res = await axios.get(getApiUrl("/api/contact"), {
+        withCredentials: true,
+      });
       if (res?.data?.success) {
         // Exclude reactivation requests from Contact Messages list so
         // they only appear under the dedicated "Reactivation Requests" admin view.
@@ -59,7 +61,13 @@ export default function AdminContacts() {
     if (!response)
       return toast({ title: "Error", description: "Response cannot be empty" });
     try {
-      await axios.patch(getApiUrl(`/api/contact/${id}/respond`), { response });
+      await axios.patch(
+        getApiUrl(`/api/contact/${id}/respond`),
+        { response },
+        {
+          withCredentials: true,
+        }
+      );
       toast({ title: "Sent", description: "Response sent" });
       fetchMsgs();
     } catch (err: any) {
