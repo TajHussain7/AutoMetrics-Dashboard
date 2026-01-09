@@ -34,6 +34,7 @@ export function useUploadFile() {
           method: "POST",
           body: formData,
           signal: controller.signal,
+          credentials: "include", // Include cookies for authentication
         });
 
         if (!response.ok) {
@@ -115,7 +116,10 @@ export function useTravelDataBySession(
       const response = await fetch(
         getApiUrl(
           `/api/travel-data/${sessionId}?page=${page}&pageSize=${pageSize}`
-        )
+        ),
+        {
+          credentials: "include",
+        }
       );
       if (!response.ok) {
         throw new Error("Failed to fetch travel data");
@@ -250,7 +254,9 @@ export function useUploadSessions() {
   return useQuery<UploadSession[]>({
     queryKey: ["/api/upload-sessions"],
     queryFn: async () => {
-      const response = await fetch(getApiUrl("/api/upload-sessions"));
+      const response = await fetch(getApiUrl("/api/upload-sessions"), {
+        credentials: "include",
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch upload sessions");
       }

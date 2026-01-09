@@ -14,6 +14,11 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 
+function getApiUrl(path: string): string {
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  return apiBase ? `${apiBase}${path}` : path;
+}
+
 type FeedbackItem = {
   _id: string;
   name?: string;
@@ -39,7 +44,7 @@ export default function FeedbackPage() {
       const headers: Record<string, string> = {};
       if (bustCache) headers["Cache-Control"] = "no-cache";
 
-      const res = await axios.get("/api/feedback", {
+      const res = await axios.get(getApiUrl("/api/feedback"), {
         withCredentials: true,
         headers,
       });
@@ -79,7 +84,7 @@ export default function FeedbackPage() {
   const updateStatus = async (id: string, status: string) => {
     try {
       const res = await axios.patch(
-        `/api/feedback/${id}/status`,
+        getApiUrl(`/api/feedback/${id}/status`),
         { status },
         { withCredentials: true }
       );

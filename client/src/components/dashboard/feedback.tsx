@@ -729,12 +729,17 @@ export default function FeedbackPrompt() {
       .join("")
       .toUpperCase();
 
+  const getApiUrl = (path: string): string => {
+    const apiBase = import.meta.env.VITE_API_URL ?? "";
+    return apiBase ? `${apiBase}${path}` : path;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [revRes, countRes] = await Promise.all([
-          axios.get("/api/feedback/recent?limit=4"),
-          axios.get("/api/users/count"),
+          axios.get(getApiUrl("/api/feedback/recent?limit=4")),
+          axios.get(getApiUrl("/api/users/count")),
         ]);
 
         if (revRes?.data?.success) {

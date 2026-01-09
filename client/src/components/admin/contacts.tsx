@@ -7,6 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Mail, RefreshCw, Send, X, CheckCircle2, Clock } from "lucide-react";
 
+function getApiUrl(path: string): string {
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  return apiBase ? `${apiBase}${path}` : path;
+}
+
 type Msg = {
   _id: string;
   name: string;
@@ -26,7 +31,7 @@ export default function AdminContacts() {
   const fetchMsgs = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/contact");
+      const res = await axios.get(getApiUrl("/api/contact"));
       if (res?.data?.success) {
         // Exclude reactivation requests from Contact Messages list so
         // they only appear under the dedicated "Reactivation Requests" admin view.
@@ -54,7 +59,7 @@ export default function AdminContacts() {
     if (!response)
       return toast({ title: "Error", description: "Response cannot be empty" });
     try {
-      await axios.patch(`/api/contact/${id}/respond`, { response });
+      await axios.patch(getApiUrl(`/api/contact/${id}/respond`), { response });
       toast({ title: "Sent", description: "Response sent" });
       fetchMsgs();
     } catch (err: any) {

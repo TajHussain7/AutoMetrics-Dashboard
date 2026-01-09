@@ -9,6 +9,11 @@ import { RefreshCw, Mail, CheckCircle2, Clock } from "lucide-react";
 import adminApiClient from "@/lib/admin-api-client";
 import { error } from "@/lib/logger";
 
+function getApiUrl(path: string): string {
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  return apiBase ? `${apiBase}${path}` : path;
+}
+
 type Msg = {
   _id: string;
   name: string;
@@ -28,7 +33,7 @@ export default function AdminReactivations() {
   const fetchMsgs = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/contact");
+      const res = await axios.get(getApiUrl("/api/contact"));
       if (res?.data?.success) {
         // Filter to only reactivation-type messages
         const all: Msg[] = res.data.messages || [];
@@ -58,7 +63,7 @@ export default function AdminReactivations() {
     if (!response)
       return toast({ title: "Error", description: "Response cannot be empty" });
     try {
-      await axios.patch(`/api/contact/${id}/respond`, { response });
+      await axios.patch(getApiUrl(`/api/contact/${id}/respond`), { response });
       toast({ title: "Sent", description: "Response sent" });
       fetchMsgs();
     } catch (err: any) {
