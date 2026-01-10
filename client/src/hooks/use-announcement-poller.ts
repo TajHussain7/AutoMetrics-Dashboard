@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { error } from "@/lib/logger";
 
@@ -15,6 +16,7 @@ interface UseAnnouncementPollerOptions {
 
 /**
  * Lightweight polling hook for announcement unread count
+ * Uses React Query for automatic request deduplication
  * Checks every 30-60 seconds if new announcements are available
  * Triggers toast when unread count increases
  */
@@ -24,25 +26,35 @@ export function useAnnouncementPoller({
   onUnreadCountChange,
 }: UseAnnouncementPollerOptions = {}) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const previousCountRef = useRef<number | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isPollingRef = useRef(false);
 
   const fetchUnreadCount = useCallback(async (): Promise<number> => {
     try {
-      const res = await fetch(
-        getApiUrl("/api/users/announcements/unread-count"),
-        {
-          credentials: "include",
-        }
-      );
+      // Use queryClient.fetchQuery for automatic request deduplication
+      // If multiple components call this simultaneously, only one request is made
+      const data = await queryClient.fetchQuery({
+        queryKey: ["/api/users/announcements/unread-count"],
+        queryFn: async () => {
+          const res = await fetch(
+            getApiUrl("/api/users/announcements/unread-count"),
+            {
+              credentials: "include",
+            }
+          );
 
-      if (!res.ok) {
-        error("Failed to fetch unread count:", res.status);
-        return previousCountRef.current || 0;
-      }
+          if (!res.ok) {
+            error("Failed to fetch unread count:", res.status);
+            throw new Error("Failed to fetch unread count");
+          }
 
-      const data = await res.json();
+          return res.json();
+        },
+        staleTime: 30000, // Consider data fresh for 30s
+      });
+
       const count = data.unreadCount || 0;
 
       // If count increased from previous, show toast and update badge

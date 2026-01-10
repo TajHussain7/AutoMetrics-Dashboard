@@ -4,6 +4,7 @@ import { authenticateToken, requireActiveUser } from "../middleware/auth.js";
 import { fileStorage } from "../storage/file-storage.js";
 import { FileStatus, uploadedFileSchema } from "../../shared/upload-schema.js";
 import { processExcelData } from "../excel-processor.js";
+import { redisCache } from "../middleware/redis-cache.js";
 
 const router = Router();
 
@@ -100,7 +101,7 @@ router.post(
 );
 
 // Get user's file history
-router.get("/history", authenticateToken, async (req, res) => {
+router.get("/history", authenticateToken, redisCache(90), async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -117,7 +118,7 @@ router.get("/history", authenticateToken, async (req, res) => {
 });
 
 // Get active file data
-router.get("/active", authenticateToken, async (req, res) => {
+router.get("/active", authenticateToken, redisCache(60), async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: "Unauthorized" });

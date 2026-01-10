@@ -4,6 +4,7 @@ import { TravelData, updateTravelDataSchema } from "../../shared/schema.js";
 import { db } from "../db.js";
 import type { Collection } from "mongodb";
 import { ObjectId } from "mongodb";
+import { redisCache } from "../middleware/redis-cache.js";
 
 const router = Router();
 let travelDataCollection: Collection;
@@ -40,45 +41,50 @@ router.post("/", authenticateToken, requireActiveUser, async (req, res) => {
 });
 
 // Get all travel data for a session with pagination
-router.get("/:sessionId", authenticateToken, async (req, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: "Unauthorized" });
+router.get(
+  "/:sessionId",
+  authenticateToken,
+  redisCache(120),
+  async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { sessionId } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 50;
+      const skip = (page - 1) * pageSize;
+
+      // Get total count
+      const total = await db
+        .collection("travel_data")
+        .countDocuments({ session_id: sessionId });
+
+      // Get paginated data
+      const data = await db
+        .collection("travel_data")
+        .find({ session_id: sessionId })
+        .sort({ created_at: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .toArray();
+
+      res.json({
+        data,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      });
+    } catch (error: any) {
+      console.error("Failed to fetch travel data:", error);
+      res.status(500).json({
+        message: error.message || "Failed to fetch travel data",
+      });
     }
-
-    const { sessionId } = req.params;
-    const page = parseInt(req.query.page as string) || 1;
-    const pageSize = parseInt(req.query.pageSize as string) || 50;
-    const skip = (page - 1) * pageSize;
-
-    // Get total count
-    const total = await db
-      .collection("travel_data")
-      .countDocuments({ session_id: sessionId });
-
-    // Get paginated data
-    const data = await db
-      .collection("travel_data")
-      .find({ session_id: sessionId })
-      .sort({ created_at: -1 })
-      .skip(skip)
-      .limit(pageSize)
-      .toArray();
-
-    res.json({
-      data,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    });
-  } catch (error: any) {
-    console.error("Failed to fetch travel data:", error);
-    res.status(500).json({
-      message: error.message || "Failed to fetch travel data",
-    });
   }
-});
+);
 
 // Update travel data
 router.patch("/:id", authenticateToken, requireActiveUser, async (req, res) => {

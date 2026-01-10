@@ -4,6 +4,7 @@ import { authenticateToken, requireActiveUser } from "../middleware/auth.js";
 import { debug } from "../utils/logger.js";
 import { Query } from "../models/query.js";
 import { Announcement } from "../models/announcement.js";
+import { redisCache } from "../middleware/redis-cache.js";
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.get(
   "/announcements",
   authenticateToken,
   updateLastActive,
+  redisCache(60),
   async (req, res) => {
     try {
       const user = req.user as any;

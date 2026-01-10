@@ -5,11 +5,15 @@ import express from "express";
 import { createServer } from "http";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes.js";
 import AnnouncementWebSocketServer from "./websocket.js";
 import path from "path";
 import { fileURLToPath } from "url";
-import { debug, info } from "./utils/logger.js";
+import { debug, info, warn, error as errorLogger } from "./utils/logger.js";
+import { initRedis } from "./middleware/redis-cache.js";
+import { apiCacheHeaders } from "./middleware/cache-headers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,7 +32,7 @@ async function initializeDefaultAdmin() {
       process.env.PASS;
 
     if (!adminEmail || !adminPassword) {
-      console.warn(
+      warn(
         "⚠️ Default admin credentials not found in .env (ADMIN_EMAIL and one of ADMIN_PASSWORD|PASSWORD|AMIN_PASSWORD|PASS)"
       );
       return;
@@ -64,7 +68,7 @@ async function initializeDefaultAdmin() {
     await defaultAdmin.save();
     info("✅ Default admin created successfully:", adminEmail);
   } catch (error) {
-    console.error("❌ Error initializing default admin:", error);
+    errorLogger("❌ Error initializing default admin:", error);
   }
 }
 
@@ -74,10 +78,17 @@ async function main() {
   // Connect to MongoDB
   try {
     await connectDB();
-    console.info("MongoDB connection successful");
+    info("MongoDB connection successful");
   } catch (error) {
-    console.error("MongoDB connection error:", error);
+    errorLogger("MongoDB connection error:", error);
     process.exit(1);
+  }
+
+  // Initialize Redis cache (optional - continues if Redis unavailable)
+  try {
+    await initRedis();
+  } catch (error) {
+    warn("Redis initialization failed - caching disabled:", error);
   }
 
   // Initialize default admin user
@@ -99,6 +110,23 @@ async function main() {
       allowedHeaders: ["Content-Type", "Authorization", "Accept"],
     })
   );
+
+  // HTTP Compression middleware - reduces payload size by 60-80%
+  app.use(compression());
+
+  // Rate limiting & concurrency guard - protects against spikes
+  app.use(
+    rateLimit({
+      windowMs: 60_000, // 1 minute
+      max: 300, // 300 requests per window
+      message: "Too many requests, please try again later.",
+      standardHeaders: true,
+      legacyHeaders: false,
+    })
+  );
+
+  // API response caching headers for CDN and browser
+  app.use(apiCacheHeaders);
 
   // Body parsers and cookie parser
 
@@ -162,6 +190,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Failed to start server:", err);
+  errorLogger("Failed to start server:", err);
   process.exit(1);
 });
