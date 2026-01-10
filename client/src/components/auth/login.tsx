@@ -146,19 +146,13 @@ export default function LoginScreen() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="space-y-2">
                     <Label
                       htmlFor="password"
                       className="text-sm font-semibold text-slate-700"
                     >
                       Password
                     </Label>
-                    <a
-                      href="/forgot-password"
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                    >
-                      Forgot password?
-                    </a>
                   </div>
                   <div className="relative">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
