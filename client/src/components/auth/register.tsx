@@ -129,104 +129,103 @@ export default function RegisterScreen() {
               )}
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                      <Label
-                        htmlFor="fullName"
-                        className="text-sm font-semibold text-slate-700"
-                      >
-                        Full Name
-                      </Label>
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <User className="w-4 h-4 text-slate-500" />
-                        </div>
-                        <Input
-                          id="fullName"
-                          placeholder="Your full name"
-                          required
-                          value={formData.fullName}
-                          onChange={handleInputChange}
-                          className="pl-14 h-12 rounded-xl border-slate-200 hover:border-blue-400 focus:border-blue-500 transition-all duration-200"
-                        />
-                      </div>
+                  <Label
+                    htmlFor="fullName"
+                    className="text-sm font-semibold text-slate-700"
+                  >
+                    Full Name
+                  </Label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                      <User className="w-4 h-4 text-slate-500" />
                     </div>
+                    <Input
+                      id="fullName"
+                      placeholder="Your full name"
+                      required
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      className="pl-14 h-12 rounded-xl border-slate-200 hover:border-blue-400 focus:border-blue-500 transition-all duration-200"
+                    />
+                  </div>
+                </div>
 
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="email"
-                        className="text-sm font-semibold text-slate-700"
-                      >
-                        Email
-                      </Label>
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <Mail className="w-4 h-4 text-slate-500" />
-                        </div>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="your.email@example.com"
-                          required
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          className="pl-14 h-12 rounded-xl border-slate-200 hover:border-blue-400 focus:border-blue-500 transition-all duration-200"
-                        />
-                      </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="email"
+                    className="text-sm font-semibold text-slate-700"
+                  >
+                    Email
+                  </Label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                      <Mail className="w-4 h-4 text-slate-500" />
                     </div>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      required
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="pl-14 h-12 rounded-xl border-slate-200 hover:border-blue-400 focus:border-blue-500 transition-all duration-200"
+                    />
+                  </div>
+                </div>
 
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="password"
-                        className="text-sm font-semibold text-slate-700"
-                      >
-                        Password
-                      </Label>
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <Lock className="w-4 h-4 text-slate-500" />
-                        </div>
-                        <Input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          required
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          className="pl-14 pr-12 h-12 rounded-xl border-slate-200 hover:border-blue-400 focus:border-blue-500 transition-all duration-200"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-all"
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="password"
+                    className="text-sm font-semibold text-slate-700"
+                  >
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                      <Lock className="w-4 h-4 text-slate-500" />
                     </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-white rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30"
-                      disabled={isLoading}
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="pl-14 pr-12 h-12 rounded-xl border-slate-200 hover:border-blue-400 focus:border-blue-500 transition-all duration-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-all"
                     >
-                      {isLoading ? (
-                        <div className="flex items-center gap-2">
-                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                          <span>Creating Account...</span>
-                        </div>
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <UserPlus className="h-5 w-5" />
-                          <span>Create Account</span>
-                        </div>
+                        <Eye className="h-4 w-4" />
                       )}
-                    </Button>
-                  </>
-                ) : (
-                  <ddiv>
-  
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-white rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      <span>Creating Account...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="h-5 w-5" />
+                      <span>Create Account</span>
+                    </div>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+
             <CardFooter className="flex flex-col space-y-2 text-center border-t border-slate-100 pt-6 pb-8 px-8">
               <p className="text-sm text-slate-600">
                 Already have an account?{" "}
