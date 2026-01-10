@@ -454,7 +454,7 @@ Full-Stack Engineer | Performance Optimization Specialist
 
 - 📧 Email: tajamalkhan720@gmail.com
 - 💬 WhatsApp: [+92 343 800 2540](https://wa.me/923438002540)
-- 💼 GitHub: [@tajamalhussain](https://github.com/tajamalhussain) _(Update with actual profile)_
+- 💼 GitHub: [@tajamalhussain](https://github.com/TajHussain7) _(Update with actual profile)_
 
 _Built with precision engineering and attention to performance._
 
