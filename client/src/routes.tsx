@@ -21,7 +21,6 @@ const Announcements = lazy(() => import("@/pages/announcements"));
 const AdminPage = lazy(() => import("@/pages/admin"));
 const Register = lazy(() => import("@/components/auth/register"));
 const Login = lazy(() => import("@/components/auth/login"));
-const ForgotPassword = lazy(() => import("@/components/auth/forgot-password"));
 const RegistrationSuccess = lazy(() => import("@/pages/registration-success"));
 const DeleteAccount = lazy(() => import("@/pages/delete-account"));
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -42,7 +41,6 @@ export const withSuspense = (element: React.ReactElement) => (
 export const publicRoutes: Route[] = [
   { path: "/", Component: Home },
   { path: "/login", Component: Login },
-  { path: "/forgot-password", Component: ForgotPassword },
   { path: "/register", Component: Register },
   { path: "/registration-success", Component: RegistrationSuccess },
   { path: "/account-deleted", Component: AccountDeleted },

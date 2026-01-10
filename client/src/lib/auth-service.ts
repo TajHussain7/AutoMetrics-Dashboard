@@ -87,69 +87,6 @@ class AuthService {
     }
   }
 
-  async resendOtp(
-    email: string
-  ): Promise<{ message?: string; error?: string }> {
-    try {
-      const response = await this.axiosInstance.post("/resend-otp", { email });
-      return response.data;
-    } catch (error: any) {
-      return { error: error.response?.data?.message || error.message };
-    }
-  }
-
-  async verifyOtp(
-    email: string,
-    otp: string
-  ): Promise<AuthResponse & { verified?: boolean }> {
-    try {
-      const response = await this.axiosInstance.post("/verify-email", {
-        email,
-        otp,
-      });
-      return response.data;
-    } catch (error: any) {
-      return {
-        user: null,
-        error: error.response?.data?.message || error.message,
-      };
-    }
-  }
-
-  async requestPasswordReset(
-    email: string
-  ): Promise<{ message?: string; error?: string }> {
-    try {
-      const response = await this.axiosInstance.post(
-        "/request-password-reset",
-        { email }
-      );
-      return response.data;
-    } catch (error: any) {
-      return { error: error.response?.data?.message || error.message };
-    }
-  }
-
-  async resetPassword(
-    email: string,
-    otp: string,
-    newPassword: string
-  ): Promise<AuthResponse & { reset?: boolean }> {
-    try {
-      const response = await this.axiosInstance.post("/reset-password", {
-        email,
-        otp,
-        newPassword,
-      });
-      return response.data;
-    } catch (error: any) {
-      return {
-        user: null,
-        error: error.response?.data?.message || error.message,
-      };
-    }
-  }
-
   async signOut(): Promise<void> {
     await this.axiosInstance.post("/logout");
   }

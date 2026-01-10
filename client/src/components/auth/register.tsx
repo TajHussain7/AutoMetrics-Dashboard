@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AxiosError } from "axios";
 import {
   Card,
@@ -35,31 +35,6 @@ export default function RegisterScreen() {
     password: "",
   });
 
-  // Verification state
-  const [verificationPending, setVerificationPending] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState<string | null>(
-    null
-  );
-  const [otp, setOtp] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isResending, setIsResending] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-
-  // Countdown for resend cooldown
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const t = setInterval(() => {
-      setResendCooldown((s) => {
-        if (s <= 1) {
-          clearInterval(t);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [resendCooldown]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -87,14 +62,10 @@ export default function RegisterScreen() {
       if (response?.user) {
         toast({
           title: "Registration successful",
-          description: "A verification code has been sent to your email.",
+          description: "Welcome! You are now logged in.",
         });
-        // Start verification flow
-        setVerificationPending(true);
-        setVerificationEmail(formData.email);
-
-        // Start verification flow
-        // (Do not reveal OTP on client or in logs in any environment.)
+        // Redirect to dashboard
+        window.location.href = "/dashboard";
       } else {
         debug("Registration response:", response);
         throw new Error(response?.error || "Failed to create account");
@@ -157,9 +128,7 @@ export default function RegisterScreen() {
                 </Alert>
               )}
               <form onSubmit={handleSubmit} className="space-y-5">
-                {!verificationPending ? (
-                  <>
-                    <div className="space-y-2">
+                <div className="space-y-2">
                       <Label
                         htmlFor="fullName"
                         className="text-sm font-semibold text-slate-700"
@@ -256,101 +225,8 @@ export default function RegisterScreen() {
                     </Button>
                   </>
                 ) : (
-                  <div className="space-y-4">
-                    <p className="text-sm text-slate-600">
-                      An OTP has been sent to{" "}
-                      <strong>{verificationEmail}</strong>. Enter it below to
-                      verify your email.
-                    </p>
-                    <div className="flex gap-2">
-                      <Input
-                        id="otp"
-                        placeholder="6-digit code"
-                        required
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                        className="h-12 rounded-xl border-slate-200 hover:border-blue-400 focus:border-blue-500 transition-all duration-200"
-                      />
-                      <Button
-                        onClick={async () => {
-                          setIsVerifying(true);
-                          try {
-                            if (!verificationEmail)
-                              throw new Error("No email to verify");
-                            const resp = await (
-                              await import("@/lib/auth-service")
-                            ).authService.verifyOtp(verificationEmail, otp);
-                            if (resp.user) {
-                              toast({
-                                title: "Email verified",
-                                description:
-                                  "Your email has been verified and you are now signed in.",
-                              });
-                              window.location.href = "/dashboard";
-                            } else {
-                              throw new Error(
-                                resp.error || "Verification failed"
-                              );
-                            }
-                          } catch (err: any) {
-                            toast({
-                              title: "Verification failed",
-                              description: err?.message || "Invalid code",
-                              variant: "destructive",
-                            });
-                          } finally {
-                            setIsVerifying(false);
-                          }
-                        }}
-                        className="h-12"
-                        disabled={isVerifying}
-                      >
-                        {isVerifying ? "Verifying..." : "Verify"}
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-slate-500">Didn't get it?</p>
-                      <Button
-                        variant="ghost"
-                        onClick={async () => {
-                          if (!verificationEmail) return;
-                          setIsResending(true);
-                          try {
-                            const resp = await (
-                              await import("@/lib/auth-service")
-                            ).authService.resendOtp(verificationEmail);
-                            if (resp.error) throw new Error(resp.error);
-                            toast({
-                              title: "OTP sent",
-                              description: "Check your email.",
-                            });
-                            setResendCooldown(60);
-                          } catch (err: any) {
-                            toast({
-                              title: "Resend failed",
-                              description:
-                                err?.message || "Please try again later.",
-                              variant: "destructive",
-                            });
-                          } finally {
-                            setIsResending(false);
-                          }
-                        }}
-                        disabled={isResending || resendCooldown > 0}
-                      >
-                        {isResending
-                          ? "Sending..."
-                          : resendCooldown > 0
-                          ? `Resend (${resendCooldown}s)`
-                          : "Resend"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </form>
-            </CardContent>
-
+                  <ddiv>
+  
             <CardFooter className="flex flex-col space-y-2 text-center border-t border-slate-100 pt-6 pb-8 px-8">
               <p className="text-sm text-slate-600">
                 Already have an account?{" "}
