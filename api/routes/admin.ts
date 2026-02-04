@@ -29,9 +29,13 @@ const router = Router();
 router.get("/users", isAdmin, async (req: Request, res: Response) => {
   try {
     // Include verification fields so admin can view whether users are verified
-    const users = await User.find({}, "-password").select(
-      "fullName email role status createdAt company_name phone_number isVerified emailVerifiedAt"
-    );
+    const users = await User.find({}, "-password")
+      .select(
+        "fullName email role status createdAt company_name phone_number isVerified emailVerifiedAt",
+      )
+      .sort({ createdAt: -1 })
+      .limit(5000)
+      .lean();
     res.json(users);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -41,7 +45,9 @@ router.get("/users", isAdmin, async (req: Request, res: Response) => {
 // Get user by ID
 router.get("/users/:userId", isAdmin, async (req: Request, res: Response) => {
   try {
-    const user = await User.findById(req.params.userId).select("-password");
+    const user = await User.findById(req.params.userId)
+      .select("-password")
+      .lean();
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -67,7 +73,7 @@ router.patch(
       const user = await User.findByIdAndUpdate(
         userId,
         { role },
-        { new: true, select: "-password" }
+        { new: true, select: "-password" },
       );
 
       if (!user) {
@@ -78,7 +84,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Update user status (admin only)
@@ -97,7 +103,7 @@ router.patch(
       const user = await User.findByIdAndUpdate(
         userId,
         { status },
-        { new: true, select: "-password" }
+        { new: true, select: "-password" },
       );
 
       if (!user) {
@@ -148,7 +154,7 @@ router.patch(
           });
 
           console.log(
-            `Account status notification email sent to ${user.email}`
+            `Account status notification email sent to ${user.email}`,
           );
         } else {
           console.warn("SMTP not configured - status notification not sent");
@@ -174,7 +180,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Delete user (admin only) with cascading cleanup of related data
@@ -190,8 +196,8 @@ router.delete(
       }
 
       // Collect files for the user and remove their related FileData entries
-      const files = await File.find({ user_id: userId }).select("_id");
-      const fileIds = files.map((f) => f._id);
+      const files = await File.find({ user_id: userId }).select("_id").lean();
+      const fileIds = files.map((f: any) => f._id);
 
       let deletedFileData = 0;
       let deletedFiles = 0;
@@ -302,7 +308,7 @@ router.delete(
       try {
         const updateResult = await Contact.updateMany(
           { response_by: userId },
-          { $unset: { response_by: "", response_at: "" } }
+          { $unset: { response_by: "", response_at: "" } },
         );
         cleanedContacts = updateResult.modifiedCount || 0;
       } catch (err) {
@@ -313,7 +319,7 @@ router.delete(
       try {
         await Announcement.updateMany(
           { created_by: userId },
-          { $set: { created_by: null } }
+          { $set: { created_by: null } },
         );
       } catch (err) {
         error("Failed to unset announcement authorship:", err);
@@ -323,7 +329,7 @@ router.delete(
       try {
         await Query.updateMany(
           { assigned_to: userId },
-          { $unset: { assigned_to: "" } }
+          { $unset: { assigned_to: "" } },
         );
       } catch (err) {
         error("Failed to unset assigned_to in queries:", err);
@@ -347,7 +353,7 @@ router.delete(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Get user storage info
@@ -399,7 +405,7 @@ router.get("/storage", isAdmin, async (req: Request, res: Response) => {
     // Get all users
     debug("[/storage] Fetching users...");
     const users = await User.find().select(
-      "fullName email storage_quota_bytes"
+      "fullName email storage_quota_bytes",
     );
     debug("[/storage] Found", users.length, "users");
 
@@ -462,7 +468,7 @@ router.patch(
       const user = await User.findByIdAndUpdate(
         userId,
         { storage_quota_bytes: quotaBytes },
-        { new: true, select: "fullName email storage_quota_bytes" }
+        { new: true, select: "fullName email storage_quota_bytes" },
       );
       if (!user) return res.status(404).json({ message: "User not found" });
       res.json({
@@ -472,7 +478,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // ADMIN: Clear storage for a specific user (deletes File, FileData and upload sessions)
@@ -534,7 +540,7 @@ router.post(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // ADMIN: Clear storage for ALL users (deletes File, FileData, UploadSessions and uploaded files)
@@ -586,7 +592,7 @@ router.post(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // ========================
@@ -598,7 +604,9 @@ router.get("/announcements", isAdmin, async (req: Request, res: Response) => {
   try {
     const announcements = await Announcement.find()
       .populate("created_by", "fullName email")
-      .sort({ pinned: -1, created_at: -1 });
+      .sort({ pinned: -1, created_at: -1 })
+      .limit(1000)
+      .lean();
     res.json(announcements);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -663,7 +671,7 @@ router.post("/announcements", isAdmin, async (req: Request, res: Response) => {
               created_at: new Date(),
             },
           },
-        }
+        },
       );
       debug("Pushed announcement refs to users", {
         count: updateResult.modifiedCount,
@@ -731,7 +739,7 @@ router.delete(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Update announcement
@@ -755,7 +763,7 @@ router.patch(
       const announcement = await Announcement.findByIdAndUpdate(
         req.params.id,
         update,
-        { new: true }
+        { new: true },
       ).populate("created_by", "fullName email");
 
       if (!announcement) {
@@ -766,7 +774,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Delete announcement
@@ -783,7 +791,7 @@ router.delete(
       try {
         await User.updateMany(
           {},
-          { $pull: { announcements: { announcement: announcement._id } } }
+          { $pull: { announcements: { announcement: announcement._id } } },
         );
       } catch (cleanupErr) {
         error("Failed to cleanup user announcement refs:", cleanupErr);
@@ -793,7 +801,7 @@ router.delete(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // ========================
@@ -807,14 +815,14 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const user = await User.findById(req.params.userId).select(
-        "announcements email fullName"
+        "announcements email fullName",
       );
       const announcements = await Announcement.find().sort({ created_at: -1 });
       res.json({ user, announcements });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 router.get("/queries", isAdmin, async (req: Request, res: Response) => {
@@ -856,7 +864,8 @@ router.get("/queries", isAdmin, async (req: Request, res: Response) => {
       .populate("user_id", "fullName email")
       .sort({ created_at: -1 })
       .skip((p - 1) * l)
-      .limit(l);
+      .limit(l)
+      .lean();
 
     res.json({
       queries,
@@ -874,7 +883,7 @@ router.get("/queries/:id", isAdmin, async (req: Request, res: Response) => {
   try {
     const query = await Query.findById(req.params.id).populate(
       "user_id",
-      "fullName email"
+      "fullName email",
     );
     if (!query) {
       return res.status(404).json({ message: "Query not found" });
@@ -957,7 +966,7 @@ router.post(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Reply to query (admin only)
@@ -1048,7 +1057,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Admin: React to a message (like/dislike)
@@ -1068,18 +1077,18 @@ router.patch(
       // Robustly find the sub-message by its _id without relying on Mongoose's
       // DocumentArray.id (which TypeScript may not recognize on the typed array).
       const msg = (q.messages || []).find(
-        (m: any) => String((m as any)._id) === String(req.params.messageId)
+        (m: any) => String((m as any)._id) === String(req.params.messageId),
       ) as any;
       if (!msg) return res.status(404).json({ message: "Message not found" });
 
       msg.reactions = msg.reactions || [];
       const existing = msg.reactions.find(
-        (r: any) => String(r.user) === String((req as any).user._id)
+        (r: any) => String(r.user) === String((req as any).user._id),
       );
       if (existing) {
         if (existing.type === type) {
           msg.reactions = msg.reactions.filter(
-            (r: any) => String(r.user) !== String((req as any).user._id)
+            (r: any) => String(r.user) !== String((req as any).user._id),
           );
         } else {
           existing.type = type;
@@ -1093,7 +1102,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Admin: React to the query (like/dislike)
@@ -1112,12 +1121,12 @@ router.patch(
 
       q.reactions = q.reactions || [];
       const existing = q.reactions.find(
-        (r: any) => String(r.user) === String((req as any).user._id)
+        (r: any) => String(r.user) === String((req as any).user._id),
       );
       if (existing) {
         if (existing.type === type) {
           q.reactions = q.reactions.filter(
-            (r: any) => String(r.user) !== String((req as any).user._id)
+            (r: any) => String(r.user) !== String((req as any).user._id),
           );
         } else {
           existing.type = type;
@@ -1131,7 +1140,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Close query (admin only)
@@ -1143,7 +1152,7 @@ router.patch(
       const query = await Query.findByIdAndUpdate(
         req.params.id,
         { status: "closed" },
-        { new: true }
+        { new: true },
       ).populate("user_id", "fullName email");
 
       if (!query) {
@@ -1154,7 +1163,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Delete query (admin only)
@@ -1213,7 +1222,7 @@ router.get("/reviews/:id", isAdmin, async (req: Request, res: Response) => {
   try {
     const review = await Review.findById(req.params.id).populate(
       "user_id",
-      "fullName email"
+      "fullName email",
     );
     if (!review) {
       return res.status(404).json({ message: "Review not found" });
@@ -1257,7 +1266,7 @@ router.post(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Approve review (admin only)
@@ -1269,7 +1278,7 @@ router.patch(
       const review = await Review.findByIdAndUpdate(
         req.params.id,
         { status: "approved" },
-        { new: true }
+        { new: true },
       ).populate("user_id", "fullName email");
 
       if (!review) {
@@ -1280,7 +1289,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Reject review (admin only)
@@ -1292,7 +1301,7 @@ router.patch(
       const review = await Review.findByIdAndUpdate(
         req.params.id,
         { status: "rejected" },
-        { new: true }
+        { new: true },
       ).populate("user_id", "fullName email");
 
       if (!review) {
@@ -1303,7 +1312,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Delete review (admin only)
@@ -1371,7 +1380,7 @@ router.get("/dashboard/stats", isAdmin, async (req: Request, res: Response) => {
       const createdAt = q.created_at ? new Date(q.created_at).getTime() : null;
       if (!createdAt) continue;
       const adminMsg = (q.messages || []).find(
-        (m: any) => m.author === "admin" && m.created_at
+        (m: any) => m.author === "admin" && m.created_at,
       );
       if (!adminMsg || !adminMsg.created_at) continue;
       const adminAt = new Date(adminMsg.created_at).getTime();
@@ -1414,26 +1423,26 @@ router.get("/dashboard/stats", isAdmin, async (req: Request, res: Response) => {
       approvedReviews,
       // Storage
       totalStorageUsed: parseFloat(
-        (totalStorageBytes / (1024 * 1024 * 1024)).toFixed(2)
+        (totalStorageBytes / (1024 * 1024 * 1024)).toFixed(2),
       ),
       totalUploadedFiles,
       totalQuota: parseFloat(
         (
           ((totalUsers + totalAdmins) * 10 * 1024 * 1024 * 1024) /
           (1024 * 1024 * 1024)
-        ).toFixed(2)
+        ).toFixed(2),
       ),
       storagePercentage: Math.round(
         (totalStorageBytes /
           ((totalUsers + totalAdmins) * 10 * 1024 * 1024 * 1024)) *
-          100
+          100,
       ),
       averageStoragePerUser: parseFloat(
         (
           totalStorageBytes /
           (totalUsers + totalAdmins || 1) /
           (1024 * 1024 * 1024)
-        ).toFixed(2)
+        ).toFixed(2),
       ),
       // Contacts & reactivations
       contactTotal,

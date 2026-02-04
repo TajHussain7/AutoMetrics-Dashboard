@@ -13,12 +13,12 @@ const router = Router();
 const updateLastActive = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   if (req.user) {
     try {
       // Fetch current DB status so we don't overwrite an explicit inactive flag
-      const dbUser = await User.findById(req.user.id).select("status");
+      const dbUser = await User.findById(req.user.id).select("status").lean();
       const update: any = { lastActive: new Date() };
       if (dbUser && dbUser.status && dbUser.status !== "inactive") {
         update.status = "active";
@@ -49,7 +49,7 @@ router.get(
       if (!user || !(user.id || user._id)) {
         console.error(
           "Announcements: user or user._id not found. req.user:",
-          user
+          user,
         );
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -94,11 +94,13 @@ router.get(
           select: "fullName email",
           transform: (doc) => doc || { fullName: "System", email: "" },
         })
-        .sort({ pinned: -1, created_at: -1 });
+        .sort({ pinned: -1, created_at: -1 })
+        .limit(500)
+        .lean();
 
       const userMap = new Map<string, any>();
       (userAnnouncements || []).forEach((a: any) =>
-        userMap.set(String(a.announcement), a)
+        userMap.set(String(a.announcement), a),
       );
 
       let decorated = announcements.map((a: any) => {
@@ -133,7 +135,7 @@ router.get(
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       });
     }
-  }
+  },
 );
 
 // User: List my queries
@@ -146,17 +148,19 @@ router.get(
       const user = req.user as any;
       const userId = user._id || user.id;
       debug(`[GET /queries/me] userId=${userId}`);
-      const queries = await Query.find({ user_id: userId }).sort({
-        created_at: -1,
-      });
+      const queries = await Query.find({ user_id: userId })
+        .select("title status created_at updated_at priority")
+        .sort({ created_at: -1 })
+        .limit(1000)
+        .lean();
       debug(
-        `[GET /queries/me] returning ${queries.length} queries for user=${userId}`
+        `[GET /queries/me] returning ${queries.length} queries for user=${userId}`,
       );
       res.json({ queries });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // User: Get a single query (owner only)
@@ -167,10 +171,9 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user as any;
-      const q = await Query.findById(req.params.id).populate(
-        "user_id",
-        "fullName email"
-      );
+      const q = await Query.findById(req.params.id)
+        .populate("user_id", "fullName email")
+        .lean();
       if (!q) return res.status(404).json({ message: "Query not found" });
 
       // Proper MongoDB ObjectId comparison (handles populated doc or raw ObjectId)
@@ -184,7 +187,7 @@ router.get(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // User: Add a follow-up message to a query
@@ -243,7 +246,7 @@ router.post(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // User: React to a message (like/dislike)
@@ -267,19 +270,19 @@ router.post(
 
       // Find message by _id (avoid relying on DocumentArray.id which TS may not recognize)
       const msg = (q.messages || []).find(
-        (m: any) => String((m as any)._id) === String(req.params.messageId)
+        (m: any) => String((m as any)._id) === String(req.params.messageId),
       ) as any;
       if (!msg) return res.status(404).json({ message: "Message not found" });
 
       msg.reactions = msg.reactions || [];
       const existing = msg.reactions.find(
-        (r: any) => String(r.user) === String(user._id)
+        (r: any) => String(r.user) === String(user._id),
       );
       if (existing) {
         if (existing.type === type) {
           // toggle off
           msg.reactions = msg.reactions.filter(
-            (r: any) => String(r.user) !== String(user._id)
+            (r: any) => String(r.user) !== String(user._id),
           );
         } else {
           existing.type = type;
@@ -293,7 +296,7 @@ router.post(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // User: React to a query (like/dislike)
@@ -317,12 +320,12 @@ router.post(
 
       q.reactions = q.reactions || [];
       const existing = q.reactions.find(
-        (r: any) => String(r.user) === String(user._id)
+        (r: any) => String(r.user) === String(user._id),
       );
       if (existing) {
         if (existing.type === type) {
           q.reactions = q.reactions.filter(
-            (r: any) => String(r.user) !== String(user._id)
+            (r: any) => String(r.user) !== String(user._id),
           );
         } else {
           existing.type = type;
@@ -336,7 +339,7 @@ router.post(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Get unread announcement count (lightweight, no announcement data)
@@ -356,7 +359,7 @@ router.get(
       const userDoc = await User.findById(userId).select("announcements");
       const unreadCount = (userDoc?.announcements || []).reduce(
         (acc: number, a: any) => acc + (a.read ? 0 : 1),
-        0
+        0,
       );
 
       res.json({ unreadCount });
@@ -367,7 +370,7 @@ router.get(
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       });
     }
-  }
+  },
 );
 
 // Public: Return total user count (used for dashboard joining number)
@@ -406,7 +409,7 @@ router.patch(
             "announcements.$.read": true,
             "announcements.$.notified": true,
           },
-        }
+        },
       );
 
       if (updateResult.matchedCount === 0) {
@@ -431,7 +434,7 @@ router.patch(
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       });
     }
-  }
+  },
 );
 
 // Get user profile
@@ -470,7 +473,7 @@ router.get(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Update single field (used for real-time field updates)
@@ -536,7 +539,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // Update user profile
@@ -564,7 +567,7 @@ router.post(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 router.patch(
@@ -615,7 +618,7 @@ router.patch(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
 );
 
 // -------------------------------
@@ -634,7 +637,7 @@ router.get(
       if (!user || !(user.id || user._id)) {
         console.error(
           "Announcements: user or user._id not found. req.user:",
-          user
+          user,
         );
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -679,11 +682,13 @@ router.get(
           select: "fullName email",
           transform: (doc) => doc || { fullName: "System", email: "" },
         })
-        .sort({ pinned: -1, created_at: -1 });
+        .sort({ pinned: -1, created_at: -1 })
+        .limit(500)
+        .lean();
 
       const userMap = new Map<string, any>();
       (userAnnouncements || []).forEach((a: any) =>
-        userMap.set(String(a.announcement), a)
+        userMap.set(String(a.announcement), a),
       );
 
       let decorated = announcements.map((a: any) => {
@@ -715,7 +720,7 @@ router.get(
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       });
     }
-  }
+  },
 );
 
 // Mark an announcement as read for the authenticated user
@@ -741,7 +746,7 @@ router.patch(
             "announcements.$.read": true,
             "announcements.$.notified": true,
           },
-        }
+        },
       );
 
       if (updateResult.matchedCount === 0) {
@@ -766,7 +771,7 @@ router.patch(
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       });
     }
-  }
+  },
 );
 
 // Delete user account (with password confirmation)
@@ -797,7 +802,7 @@ router.post("/:id/delete", authenticateToken, async (req, res) => {
 
     // 2) Delete announcement documents that were created by this user
     const userAnnouncementIds = (dbUser.announcements || []).map((a: any) =>
-      String(a.announcement)
+      String(a.announcement),
     );
     for (const annId of userAnnouncementIds) {
       if (!annId) continue;
@@ -811,7 +816,7 @@ router.post("/:id/delete", authenticateToken, async (req, res) => {
           try {
             await User.updateMany(
               {},
-              { $pull: { announcements: { announcement: annId } } }
+              { $pull: { announcements: { announcement: annId } } },
             );
           } catch (pullErr) {
             console.error("Failed to cleanup announcement refs:", pullErr);

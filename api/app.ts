@@ -14,6 +14,7 @@ import { fileURLToPath } from "url";
 import { debug, info, warn, error as errorLogger } from "./utils/logger.js";
 import { initRedis } from "./middleware/redis-cache.js";
 import { apiCacheHeaders } from "./middleware/cache-headers.js";
+import { initializeIndexes } from "./utils/db-indexes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,7 +34,7 @@ async function initializeDefaultAdmin() {
 
     if (!adminEmail || !adminPassword) {
       warn(
-        "⚠️ Default admin credentials not found in .env (ADMIN_EMAIL and one of ADMIN_PASSWORD|PASSWORD|AMIN_PASSWORD|PASS)"
+        "⚠️ Default admin credentials not found in .env (ADMIN_EMAIL and one of ADMIN_PASSWORD|PASSWORD|AMIN_PASSWORD|PASS)",
       );
       return;
     }
@@ -75,6 +76,25 @@ async function initializeDefaultAdmin() {
 async function main() {
   const app = express();
 
+  // Trust proxy for accurate IP addresses behind Render/Vercel
+  app.set("trust proxy", 1);
+
+  // Response time monitoring (development only)
+  if (process.env.NODE_ENV !== "production") {
+    app.use((req, res, next) => {
+      const start = Date.now();
+      res.on("finish", () => {
+        const duration = Date.now() - start;
+        if (duration > 1000) {
+          warn(`Slow request: ${req.method} ${req.path} - ${duration}ms`);
+        } else {
+          debug(`${req.method} ${req.path} - ${duration}ms`);
+        }
+      });
+      next();
+    });
+  }
+
   // Connect to MongoDB
   try {
     await connectDB();
@@ -89,6 +109,13 @@ async function main() {
     await initRedis();
   } catch (error) {
     warn("Redis initialization failed - caching disabled:", error);
+  }
+
+  // Initialize database indexes for optimal query performance
+  try {
+    await initializeIndexes();
+  } catch (error) {
+    warn("Database index initialization failed:", error);
   }
 
   // Initialize default admin user
@@ -108,11 +135,24 @@ async function main() {
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       credentials: true,
       allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-    })
+    }),
   );
 
   // HTTP Compression middleware - reduces payload size by 60-80%
-  app.use(compression());
+  app.use(
+    compression({
+      level: 6, // Compression level (0-9, default 6 is good balance)
+      threshold: 1024, // Only compress responses > 1KB
+      filter: (req: any, res: any) => {
+        // Skip compression if explicitly disabled
+        if (req.headers["x-no-compression"]) {
+          return false;
+        }
+        // Use default compression filter
+        return compression.filter(req, res);
+      },
+    }),
+  );
 
   // Rate limiting & concurrency guard - protects against spikes
   app.use(
@@ -122,7 +162,7 @@ async function main() {
       message: "Too many requests, please try again later.",
       standardHeaders: true,
       legacyHeaders: false,
-    })
+    }),
   );
 
   // API response caching headers for CDN and browser
@@ -145,8 +185,8 @@ async function main() {
         .filter((r: any) => r.route)
         .map(
           (r: any) =>
-            `${Object.keys(r.route.methods).join(",")} ${r.route.path}`
-        )
+            `${Object.keys(r.route.methods).join(",")} ${r.route.path}`,
+        ),
     );
   }
 
