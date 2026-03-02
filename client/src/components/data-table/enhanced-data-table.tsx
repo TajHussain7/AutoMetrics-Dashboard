@@ -235,7 +235,7 @@ export default function EnhancedDataTable() {
             "w-3.5 h-3.5 transition-all duration-200",
             sortBy === column && sortOrder === "asc"
               ? "text-blue-300"
-              : "text-slate-400 group-hover:text-slate-300"
+              : "text-slate-400 group-hover:text-slate-300",
           )}
         />
         <ChevronDown
@@ -243,7 +243,7 @@ export default function EnhancedDataTable() {
             "w-3.5 h-3.5 transition-all duration-200",
             sortBy === column && sortOrder === "desc"
               ? "text-blue-300"
-              : "text-slate-400 group-hover:text-slate-300"
+              : "text-slate-400 group-hover:text-slate-300",
           )}
         />
       </div>
@@ -253,12 +253,12 @@ export default function EnhancedDataTable() {
   const getEffectiveCustomer = useCallback(
     (row: TravelData) =>
       editedCustomerRates[row.id] ?? row.customer_rate?.toString() ?? "0",
-    [editedCustomerRates]
+    [editedCustomerRates],
   );
   const getEffectiveCompany = useCallback(
     (row: TravelData) =>
       editedCompanyRates[row.id] ?? row.company_rate?.toString() ?? "0",
-    [editedCompanyRates]
+    [editedCompanyRates],
   );
 
   const getMongoId = useCallback(
@@ -266,7 +266,7 @@ export default function EnhancedDataTable() {
       const row = filteredAndSortedData.find((item) => item.id === frontendId);
       return (row as any)?._id;
     },
-    [filteredAndSortedData]
+    [filteredAndSortedData],
   );
 
   const updateRatesImmediately = useCallback(
@@ -287,11 +287,11 @@ export default function EnhancedDataTable() {
 
           const customer_rate = Math.max(
             0,
-            Number.parseFloat(currentCustomerRate || "0")
+            Number.parseFloat(currentCustomerRate || "0"),
           );
           const company_rate = Math.max(
             0,
-            Number.parseFloat(currentCompanyRate || "0")
+            Number.parseFloat(currentCompanyRate || "0"),
           );
 
           updates.customer_rate = Math.round(customer_rate);
@@ -348,7 +348,7 @@ export default function EnhancedDataTable() {
       getEffectiveCustomer,
       getEffectiveCompany,
       getMongoId,
-    ]
+    ],
   );
 
   const handleCustomerRateChange = useCallback(
@@ -359,7 +359,7 @@ export default function EnhancedDataTable() {
       }));
       updateRatesImmediately(rowId, value, undefined);
     },
-    [updateRatesImmediately]
+    [updateRatesImmediately],
   );
 
   const handleCompanyRateChange = useCallback(
@@ -370,7 +370,7 @@ export default function EnhancedDataTable() {
       }));
       updateRatesImmediately(rowId, undefined, value);
     },
-    [updateRatesImmediately]
+    [updateRatesImmediately],
   );
 
   const commitRates = async (row: TravelData) => {
@@ -385,7 +385,7 @@ export default function EnhancedDataTable() {
       if (editedCustomerRates[row.id] !== undefined) {
         const customer_rate = Math.max(
           0,
-          Number.parseFloat(editedCustomerRates[row.id] || "0")
+          Number.parseFloat(editedCustomerRates[row.id] || "0"),
         );
         updates.customer_rate = Math.round(customer_rate);
       }
@@ -393,7 +393,7 @@ export default function EnhancedDataTable() {
       if (editedCompanyRates[row.id] !== undefined) {
         const company_rate = Math.max(
           0,
-          Number.parseFloat(editedCompanyRates[row.id] || "0")
+          Number.parseFloat(editedCompanyRates[row.id] || "0"),
         );
         updates.company_rate = Math.round(company_rate);
       }
@@ -489,8 +489,8 @@ export default function EnhancedDataTable() {
                   ? FlightStatus.Cancelled
                   : FlightStatus.Coming,
             }
-          : item
-      )
+          : item,
+      ),
     );
 
     // Invalidate queries to trigger server refetch
@@ -527,7 +527,7 @@ export default function EnhancedDataTable() {
     const set = (k: string, v: string) => setValues((s) => ({ ...s, [k]: v }));
 
     const [dateSelected, setDateSelected] = useState<Date | undefined>(
-      values.date ? new Date(values.date) : new Date()
+      values.date ? new Date(values.date) : new Date(),
     );
     const [flyingDateSelected, setFlyingDateSelected] = useState<
       Date | undefined
@@ -783,7 +783,7 @@ export default function EnhancedDataTable() {
               const missing = required
                 .filter(
                   ([k]) =>
-                    !values[k as string] || values[k as string].trim() === ""
+                    !values[k as string] || values[k as string].trim() === "",
                 )
                 .map(([, label]) => label);
               if (missing.length > 0) {
@@ -941,9 +941,8 @@ export default function EnhancedDataTable() {
                           updated_at: new Date().toISOString(),
                         } as Omit<TravelDataBase, "id">;
 
-                        const mongoResponse = await createMutation.mutateAsync(
-                          newItem
-                        );
+                        const mongoResponse =
+                          await createMutation.mutateAsync(newItem);
 
                         const mongoData =
                           mongoResponse as unknown as MongoTravelData;
@@ -1019,7 +1018,7 @@ export default function EnhancedDataTable() {
                   "min-w-[100px] rounded-xl shadow-sm hover:shadow",
                   selectedItems.size > 0
                     ? "text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 bg-red-50/50"
-                    : "text-slate-400 bg-slate-50/50 border-slate-200 cursor-not-allowed"
+                    : "text-slate-400 bg-slate-50/50 border-slate-200 cursor-not-allowed",
                 )}
                 disabled={selectedItems.size === 0}
                 onClick={() => {
@@ -1077,7 +1076,7 @@ export default function EnhancedDataTable() {
                     debug("Deleting travel-data ids:", idsToDelete);
 
                     await Promise.all(
-                      idsToDelete.map((id) => deleteMutation.mutateAsync(id))
+                      idsToDelete.map((id) => deleteMutation.mutateAsync(id)),
                     );
 
                     setSelectedItems(new Set());
@@ -1123,10 +1122,13 @@ export default function EnhancedDataTable() {
           className="w-full"
           style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}
         >
-          <table className="w-full" style={{ minWidth: "1400px" }}>
+          <table
+            className="w-full border-collapse"
+            style={{ minWidth: "1400px" }}
+          >
             <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white">
               <tr>
-                <th className="w-12 px-4 py-5 text-left">
+                <th className="w-12 px-4 py-5 text-left border-r border-slate-600">
                   <Checkbox
                     checked={
                       selectedItems.size === filteredAndSortedData.length &&
@@ -1136,40 +1138,40 @@ export default function EnhancedDataTable() {
                     className="border-white/50 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                   />
                 </th>
-                <th className="px-4 py-5 text-left min-w-[100px]">
+                <th className="px-4 py-5 text-left min-w-[100px] border-r border-slate-600">
                   <SortButton column="date">Date</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px]">
+                <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
                   <SortButton column="voucher">Voucher</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[140px]">
+                <th className="px-4 py-5 text-left min-w-[140px] border-r border-slate-600">
                   <SortButton column="customer_name">Customer</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px]">
+                <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
                   <SortButton column="route">Route</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[100px]">
+                <th className="px-4 py-5 text-left min-w-[100px] border-r border-slate-600">
                   <SortButton column="pnr">PNR</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px]">
+                <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
                   <SortButton column="flying_date">Flying Date</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px]">
+                <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
                   <SortButton column="flight_status">Flight Status</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px]">
+                <th className="px-4 py-5 text-right min-w-[100px] border-r border-slate-600">
                   <SortButton column="debit">Debit</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px]">
+                <th className="px-4 py-5 text-right min-w-[100px] border-r border-slate-600">
                   <SortButton column="credit">Credit</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px]">
+                <th className="px-4 py-5 text-right min-w-[100px] border-r border-slate-600">
                   <SortButton column="balance">Balance</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[130px]">
+                <th className="px-4 py-5 text-right min-w-[130px] border-r border-slate-600">
                   <SortButton column="customer_rate">Customer Rate</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right font-semibold">
+                <th className="px-4 py-5 text-right font-semibold border-r border-slate-600">
                   <SortButton column="company_rate">Company Rate</SortButton>
                 </th>
                 <th className="px-4 py-5 text-right font-semibold">
@@ -1197,13 +1199,13 @@ export default function EnhancedDataTable() {
                   <tr
                     key={item.id}
                     className={cn(
-                      "border-b border-slate-100 hover:bg-blue-50/60 transition-colors duration-150",
+                      "border-b border-slate-200 hover:bg-blue-50/60 transition-colors duration-150",
                       getRowColor(index),
                       selectedItems.has(item.id) &&
-                        "bg-blue-100/80 hover:bg-blue-100"
+                        "bg-blue-100/80 hover:bg-blue-100",
                     )}
                   >
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-r border-slate-200">
                       <Checkbox
                         checked={selectedItems.has(item.id)}
                         onCheckedChange={(val) =>
@@ -1212,35 +1214,35 @@ export default function EnhancedDataTable() {
                         className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                       />
                     </td>
-                    <td className="px-4 py-4 text-sm font-medium text-slate-700">
+                    <td className="px-4 py-4 text-sm font-medium text-slate-700 border-r border-slate-200">
                       {formatters.date(item.date)}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-r border-slate-200">
                       <code className="bg-slate-100 text-slate-800 px-2.5 py-1 rounded-lg text-sm font-mono border border-slate-200">
                         {item.voucher}
                       </code>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-r border-slate-200">
                       <div className="font-semibold text-slate-900">
                         {item.customer_name || "—"}
                       </div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-r border-slate-200">
                       <div className="text-sm bg-blue-50 text-blue-800 px-2.5 py-1.5 rounded-lg border border-blue-100 inline-block">
                         {item.route ? formatters.route(item.route) : "—"}
                       </div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-r border-slate-200">
                       <code className="bg-green-50 text-green-800 px-2.5 py-1 rounded-lg text-sm font-mono border border-green-100">
                         {item.pnr || "—"}
                       </code>
                     </td>
-                    <td className="px-4 py-4 text-sm text-slate-700 font-medium">
+                    <td className="px-4 py-4 text-sm text-slate-700 font-medium border-r border-slate-200">
                       {item.flying_date
                         ? formatters.date(item.flying_date)
                         : "—"}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap border-r border-slate-200">
                       {flightStatus === FlightStatus.Gone ? (
                         <span className="w-28 h-8 text-sm font-semibold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-lg shadow-sm inline-flex items-center justify-center border border-amber-200">
                           {FlightStatus.Gone}
@@ -1257,7 +1259,7 @@ export default function EnhancedDataTable() {
                               "w-28 h-8 text-sm font-semibold px-3 py-1 rounded-lg shadow-sm border",
                               flightStatus === "Cancelled"
                                 ? "text-red-800 bg-red-50 border-red-200"
-                                : "text-green-800 bg-green-50 border-green-200"
+                                : "text-green-800 bg-green-50 border-green-200",
                             )}
                           >
                             <SelectValue />
@@ -1273,40 +1275,40 @@ export default function EnhancedDataTable() {
                         </Select>
                       )}
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm">
+                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-200">
                       <span
                         className={cn(
                           "font-semibold",
-                          item.debit ? "text-red-600" : "text-slate-300"
+                          item.debit ? "text-red-600" : "text-slate-300",
                         )}
                       >
                         {formatters.currency(item.debit)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm">
+                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-200">
                       <span
                         className={cn(
                           "font-semibold",
-                          item.credit ? "text-green-600" : "text-slate-300"
+                          item.credit ? "text-green-600" : "text-slate-300",
                         )}
                       >
                         {formatters.currency(item.credit)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm font-semibold">
+                    <td className="px-4 py-4 text-right font-mono text-sm font-semibold border-r border-slate-200">
                       <span
                         className={cn(
                           item.balance !== undefined && item.balance > 0
                             ? "text-green-600"
                             : item.balance !== undefined && item.balance < 0
-                            ? "text-red-600"
-                            : "text-slate-300"
+                              ? "text-red-600"
+                              : "text-slate-300",
                         )}
                       >
                         {formatters.currency(item.balance)}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-r border-slate-200">
                       <div className="flex items-center justify-end">
                         <Input
                           type="number"
@@ -1338,7 +1340,7 @@ export default function EnhancedDataTable() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-r border-slate-200">
                       <div className="flex items-center justify-end">
                         <Input
                           type="number"
@@ -1377,8 +1379,8 @@ export default function EnhancedDataTable() {
                           c - k === 0
                             ? "text-slate-300"
                             : c - k > 0
-                            ? "text-green-600"
-                            : "text-red-600"
+                              ? "text-green-600"
+                              : "text-red-600",
                         )}
                       >
                         {previewProfit}
