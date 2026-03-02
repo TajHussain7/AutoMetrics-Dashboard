@@ -103,6 +103,9 @@ export default function EnhancedDataTable() {
   >({});
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editedReferredBy, setEditedReferredBy] = useState<
+    Record<string, string>
+  >({});
 
   const [openConfirm, setOpenConfirm] = useState(false);
   const [deleteContext, setDeleteContext] = useState({
@@ -455,6 +458,66 @@ export default function EnhancedDataTable() {
     }
   };
 
+  const handleReferredByChange = useCallback((rowId: string, value: string) => {
+    setEditedReferredBy((prev) => ({ ...prev, [rowId]: value }));
+  }, []);
+
+  const commitReferredBy = async (row: TravelData) => {
+    try {
+      const pending = editedReferredBy[row.id];
+      if (pending === undefined) return;
+
+      const trimmed = pending.trim();
+      const currentVal = (row as any).referred_by ?? "";
+
+      if (trimmed.toUpperCase() === currentVal.toUpperCase()) {
+        setEditedReferredBy((prev) => {
+          const copy = { ...prev };
+          delete copy[row.id];
+          return copy;
+        });
+        return;
+      }
+
+      const mongoId = getMongoId(row.id);
+      await updateMutation.mutateAsync({
+        id: mongoId,
+        data: { referred_by: trimmed ? trimmed.toUpperCase() : null },
+      });
+
+      setEditedReferredBy((prev) => {
+        const copy = { ...prev };
+        delete copy[row.id];
+        return copy;
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/travel-data"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/travel-data", currentSessionId],
+      });
+
+      toast({
+        title: "Reference Saved",
+        description: trimmed
+          ? `Referred by "${trimmed.toUpperCase()}" has been saved.`
+          : "Customer reference has been cleared.",
+        duration: 2000,
+      });
+    } catch (error) {
+      errorLogger("Error updating referred_by:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save reference. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      setEditedReferredBy((prev) => ({
+        ...prev,
+        [row.id]: (row as any).referred_by ?? "",
+      }));
+    }
+  };
+
   const handleFlightStatusChange = async (row: TravelData, value: string) => {
     const currentStatus = getFlightStatus(row);
 
@@ -523,6 +586,7 @@ export default function EnhancedDataTable() {
       payment_status: "Pending",
       narration: "",
       reference: "",
+      referred_by: "",
     });
     const set = (k: string, v: string) => setValues((s) => ({ ...s, [k]: v }));
 
@@ -748,6 +812,24 @@ export default function EnhancedDataTable() {
               className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
             />
           </div>
+
+          <div className="space-y-2 md:col-span-3">
+            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-600 text-xs font-bold">
+                R
+              </span>
+              Referred By
+              <span className="text-xs font-normal text-slate-400 ml-1">
+                (Who referred this customer?)
+              </span>
+            </label>
+            <Input
+              placeholder="e.g. AHMED ALI, WALK-IN, ONLINE"
+              value={values.referred_by}
+              onChange={(e) => set("referred_by", e.target.value)}
+              className="bg-white border-slate-200 hover:border-purple-400 focus:border-purple-500 focus:ring-purple-500/20 rounded-xl"
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -929,6 +1011,9 @@ export default function EnhancedDataTable() {
                           customer_name: (
                             values.customer_name || ""
                           ).toUpperCase(),
+                          referred_by: values.referred_by
+                            ? values.referred_by.trim().toUpperCase()
+                            : null,
                           route: (values.route || "").toUpperCase(),
                           pnr: (values.pnr || "").toUpperCase(),
                           flying_date: values.flying_date || null,
@@ -1124,7 +1209,7 @@ export default function EnhancedDataTable() {
         >
           <table
             className="w-full border-collapse"
-            style={{ minWidth: "1400px" }}
+            style={{ minWidth: "1560px" }}
           >
             <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white sticky top-0 z-10">
               <tr className="border-b-2 border-slate-600">
@@ -1146,6 +1231,16 @@ export default function EnhancedDataTable() {
                 </th>
                 <th className="px-4 py-5 text-left min-w-[140px] border-r border-slate-600">
                   <SortButton column="customer_name">Customer</SortButton>
+                </th>
+                <th className="px-4 py-5 text-left min-w-[140px] border-r border-slate-600">
+                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-purple-500/30 text-purple-200 text-[10px] font-bold">
+                      R
+                    </span>
+                    <span className="font-semibold text-sm tracking-wide">
+                      Referred By
+                    </span>
+                  </div>
                 </th>
                 <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
                   <SortButton column="route">Route</SortButton>
@@ -1226,6 +1321,31 @@ export default function EnhancedDataTable() {
                       <div className="font-semibold text-slate-900">
                         {item.customer_name || "—"}
                       </div>
+                    </td>
+                    <td className="px-4 py-4 border-r border-slate-200">
+                      <Input
+                        type="text"
+                        value={
+                          editedReferredBy[item.id] !== undefined
+                            ? editedReferredBy[item.id]
+                            : (item as any).referred_by || ""
+                        }
+                        onChange={(e) => {
+                          setEditingRow(item.id);
+                          handleReferredByChange(item.id, e.target.value);
+                        }}
+                        onFocus={() => setEditingRow(item.id)}
+                        onBlur={() => {
+                          commitReferredBy(item);
+                          if (editingRow === item.id) setEditingRow(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter")
+                            (e.target as HTMLInputElement).blur();
+                        }}
+                        className="w-32 rounded-lg border-slate-200 focus:border-purple-500 focus:ring-purple-500/20 text-sm uppercase placeholder:normal-case placeholder:text-slate-400"
+                        placeholder="Add reference..."
+                      />
                     </td>
                     <td className="px-4 py-4 border-r border-slate-200">
                       <div className="text-sm bg-blue-50 text-blue-800 px-2.5 py-1.5 rounded-lg border border-blue-100 inline-block">

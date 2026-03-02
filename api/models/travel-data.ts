@@ -6,6 +6,7 @@ const travelDataSchema = new mongoose.Schema({
   date: String,
   voucher: String,
   reference: { type: String, default: null },
+  referred_by: { type: String, default: null },
   narration: { type: String, default: null },
   debit: { type: Number, default: null },
   credit: { type: Number, default: null },

@@ -26,6 +26,7 @@ export interface TravelDataBase extends BaseEntity {
   credit: number;
   balance: number;
   customer_name: string;
+  referred_by?: string | null;
   route: string;
   pnr: string;
   flying_date: string;
