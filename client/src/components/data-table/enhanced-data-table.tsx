@@ -1302,14 +1302,7 @@ export default function EnhancedDataTable() {
                   <SortButton column="customer_name">Customer</SortButton>
                 </th>
                 <th className="px-4 py-5 text-left min-w-[140px] border-r border-slate-600">
-                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-purple-500/30 text-purple-200 text-[10px] font-bold">
-                      R
-                    </span>
-                    <span className="font-semibold text-sm tracking-wide">
-                      Referred By
-                    </span>
-                  </div>
+                  <SortButton column="referred_by">Referred By</SortButton>
                 </th>
                 <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
                   <SortButton column="route">Route</SortButton>
@@ -1340,10 +1333,10 @@ export default function EnhancedDataTable() {
                 <th className="px-4 py-5 text-right min-w-[130px] border-r border-slate-600">
                   <SortButton column="customer_rate">Customer Rate</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right font-semibold border-r border-slate-600">
+                <th className="px-4 py-5 text-right min-w-[130px] border-r border-slate-600">
                   <SortButton column="company_rate">Company Rate</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right font-semibold">
+                <th className="px-4 py-5 text-right min-w-[100px] border-r border-slate-600">
                   <SortButton column="profit">Profit</SortButton>
                 </th>
               </tr>
@@ -1610,7 +1603,7 @@ export default function EnhancedDataTable() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm">
+                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-200">
                       <span
                         className={cn(
                           "font-bold",
