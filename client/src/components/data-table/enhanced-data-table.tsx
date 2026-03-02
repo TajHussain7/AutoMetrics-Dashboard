@@ -563,6 +563,51 @@ export default function EnhancedDataTable() {
     });
   };
 
+  const handlePaymentStatusChange = async (row: TravelData, value: string) => {
+    try {
+      const mongoId = getMongoId(row.id);
+
+      await updateMutation.mutateAsync({
+        id: mongoId,
+        data: {
+          payment_status: value as PaymentStatus,
+        },
+      });
+
+      // Update context state immediately for instant UI feedback
+      setTravelData(
+        travelData.map((item) =>
+          item.id === row.id
+            ? {
+                ...item,
+                payment_status: value as PaymentStatus,
+              }
+            : item,
+        ),
+      );
+
+      // Invalidate queries to trigger server refetch
+      await queryClient.invalidateQueries({ queryKey: ["/api/travel-data"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/travel-data", currentSessionId],
+      });
+
+      toast({
+        title: "Payment Status Updated",
+        description: `Payment status changed to "${value}".`,
+        duration: 2000,
+      });
+    } catch (error) {
+      errorLogger("Error updating payment status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update payment status. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  };
+
   function AddEntryForm({
     onAdd,
     onCancel,
@@ -1209,7 +1254,7 @@ export default function EnhancedDataTable() {
         >
           <table
             className="w-full border-collapse"
-            style={{ minWidth: "1560px" }}
+            style={{ minWidth: "1700px" }}
           >
             <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white sticky top-0 z-10">
               <tr className="border-b-2 border-slate-600">
@@ -1253,6 +1298,11 @@ export default function EnhancedDataTable() {
                 </th>
                 <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
                   <SortButton column="flight_status">Flight Status</SortButton>
+                </th>
+                <th className="px-4 py-5 text-left min-w-[130px] border-r border-slate-600">
+                  <SortButton column="payment_status">
+                    Payment Status
+                  </SortButton>
                 </th>
                 <th className="px-4 py-5 text-right min-w-[100px] border-r border-slate-600">
                   <SortButton column="debit">Debit</SortButton>
@@ -1394,6 +1444,41 @@ export default function EnhancedDataTable() {
                           </SelectContent>
                         </Select>
                       )}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap border-r border-slate-200">
+                      <Select
+                        value={
+                          (item as any).payment_status || PaymentStatus.Pending
+                        }
+                        onValueChange={(v: string) =>
+                          handlePaymentStatusChange(item, v)
+                        }
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            "w-28 h-8 text-sm font-semibold px-3 py-1 rounded-lg shadow-sm border",
+                            (item as any).payment_status === PaymentStatus.Paid
+                              ? "text-green-800 bg-green-50 border-green-200"
+                              : (item as any).payment_status ===
+                                  PaymentStatus.Partial
+                                ? "text-blue-800 bg-blue-50 border-blue-200"
+                                : "text-amber-800 bg-amber-50 border-amber-200",
+                          )}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value={PaymentStatus.Pending}>
+                            {PaymentStatus.Pending}
+                          </SelectItem>
+                          <SelectItem value={PaymentStatus.Partial}>
+                            {PaymentStatus.Partial}
+                          </SelectItem>
+                          <SelectItem value={PaymentStatus.Paid}>
+                            {PaymentStatus.Paid}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-200">
                       <span
