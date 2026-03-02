@@ -1277,7 +1277,7 @@ export default function EnhancedDataTable() {
           style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}
         >
           <table
-            className="w-full border-collapse"
+            className="w-full border-separate border-spacing-0"
             style={{ minWidth: "1700px" }}
           >
             <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white sticky top-0 z-10">
