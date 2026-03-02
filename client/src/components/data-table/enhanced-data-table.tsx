@@ -21,6 +21,9 @@ import {
   CalendarIcon,
   Plus,
   Table,
+  UserPlus,
+  Pencil,
+  X,
 } from "lucide-react";
 import type { MongoTravelData } from "@shared/mongodb-types";
 import type { TravelDataBase } from "@shared/types";
@@ -59,7 +62,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -103,9 +108,9 @@ export default function EnhancedDataTable() {
   >({});
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [editedReferredBy, setEditedReferredBy] = useState<
-    Record<string, string>
-  >({});
+  const [refDialogRow, setRefDialogRow] = useState<TravelData | null>(null);
+  const [refDialogValue, setRefDialogValue] = useState("");
+  const [refDialogOpen, setRefDialogOpen] = useState(false);
 
   const [openConfirm, setOpenConfirm] = useState(false);
   const [deleteContext, setDeleteContext] = useState({
@@ -458,38 +463,32 @@ export default function EnhancedDataTable() {
     }
   };
 
-  const handleReferredByChange = useCallback((rowId: string, value: string) => {
-    setEditedReferredBy((prev) => ({ ...prev, [rowId]: value }));
+  const openReferenceDialog = useCallback((row: TravelData) => {
+    setRefDialogRow(row);
+    setRefDialogValue((row as any).referred_by || "");
+    setRefDialogOpen(true);
   }, []);
 
-  const commitReferredBy = async (row: TravelData) => {
+  const saveReference = async () => {
+    if (!refDialogRow) return;
+    const trimmed = refDialogValue.trim();
+    const currentVal = (refDialogRow as any).referred_by ?? "";
+
+    if (trimmed.toUpperCase() === currentVal.toUpperCase()) {
+      setRefDialogOpen(false);
+      setRefDialogRow(null);
+      return;
+    }
+
     try {
-      const pending = editedReferredBy[row.id];
-      if (pending === undefined) return;
-
-      const trimmed = pending.trim();
-      const currentVal = (row as any).referred_by ?? "";
-
-      if (trimmed.toUpperCase() === currentVal.toUpperCase()) {
-        setEditedReferredBy((prev) => {
-          const copy = { ...prev };
-          delete copy[row.id];
-          return copy;
-        });
-        return;
-      }
-
-      const mongoId = getMongoId(row.id);
+      const mongoId = getMongoId(refDialogRow.id);
       await updateMutation.mutateAsync({
         id: mongoId,
         data: { referred_by: trimmed ? trimmed.toUpperCase() : null },
       });
 
-      setEditedReferredBy((prev) => {
-        const copy = { ...prev };
-        delete copy[row.id];
-        return copy;
-      });
+      setRefDialogOpen(false);
+      setRefDialogRow(null);
 
       await queryClient.invalidateQueries({ queryKey: ["/api/travel-data"] });
       await queryClient.invalidateQueries({
@@ -511,10 +510,35 @@ export default function EnhancedDataTable() {
         variant: "destructive",
         duration: 3000,
       });
-      setEditedReferredBy((prev) => ({
-        ...prev,
-        [row.id]: (row as any).referred_by ?? "",
-      }));
+    }
+  };
+
+  const removeReference = async (row: TravelData) => {
+    try {
+      const mongoId = getMongoId(row.id);
+      await updateMutation.mutateAsync({
+        id: mongoId,
+        data: { referred_by: null },
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/travel-data"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/travel-data", currentSessionId],
+      });
+
+      toast({
+        title: "Reference Removed",
+        description: "Customer reference has been cleared.",
+        duration: 2000,
+      });
+    } catch (error) {
+      errorLogger("Error removing referred_by:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove reference. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
     }
   };
 
@@ -1373,29 +1397,38 @@ export default function EnhancedDataTable() {
                       </div>
                     </td>
                     <td className="px-4 py-4 border-r border-slate-200">
-                      <Input
-                        type="text"
-                        value={
-                          editedReferredBy[item.id] !== undefined
-                            ? editedReferredBy[item.id]
-                            : (item as any).referred_by || ""
-                        }
-                        onChange={(e) => {
-                          setEditingRow(item.id);
-                          handleReferredByChange(item.id, e.target.value);
-                        }}
-                        onFocus={() => setEditingRow(item.id)}
-                        onBlur={() => {
-                          commitReferredBy(item);
-                          if (editingRow === item.id) setEditingRow(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter")
-                            (e.target as HTMLInputElement).blur();
-                        }}
-                        className="w-32 rounded-lg border-slate-200 focus:border-purple-500 focus:ring-purple-500/20 text-sm uppercase placeholder:normal-case placeholder:text-slate-400"
-                        placeholder="Add reference..."
-                      />
+                      {(item as any).referred_by ? (
+                        <div className="flex items-center gap-1.5">
+                          <div className="font-semibold text-slate-900 text-sm">
+                            {(item as any).referred_by}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openReferenceDialog(item)}
+                            className="p-1 rounded-md text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                            title="Edit reference"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeReference(item)}
+                            className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Remove reference"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openReferenceDialog(item)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          Add Reference
+                        </button>
+                      )}
                     </td>
                     <td className="px-4 py-4 border-r border-slate-200">
                       <div className="text-sm bg-blue-50 text-blue-800 px-2.5 py-1.5 rounded-lg border border-blue-100 inline-block">
@@ -1598,6 +1631,87 @@ export default function EnhancedDataTable() {
           </table>
         </div>
       </Card>
+
+      {/* Reference Name Dialog */}
+      <Dialog
+        open={refDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRefDialogOpen(false);
+            setRefDialogRow(null);
+            setRefDialogValue("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600">
+                <UserPlus className="w-4 h-4" />
+              </span>
+              {(refDialogRow as any)?.referred_by
+                ? "Edit Reference"
+                : "Add Reference"}
+            </DialogTitle>
+            <DialogDescription>
+              {refDialogRow?.customer_name ? (
+                <>
+                  Who referred{" "}
+                  <span className="font-semibold text-slate-800">
+                    {refDialogRow.customer_name}
+                  </span>
+                  ?
+                </>
+              ) : (
+                "Enter the name of the person who referred this customer."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-2">
+              <Label
+                htmlFor="ref-name"
+                className="text-sm font-medium text-slate-700"
+              >
+                Reference Name
+              </Label>
+              <Input
+                id="ref-name"
+                placeholder="e.g. AHMED ALI, WALK-IN, ONLINE"
+                value={refDialogValue}
+                onChange={(e) => setRefDialogValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveReference();
+                }}
+                className="bg-white border-slate-200 hover:border-purple-400 focus:border-purple-500 focus:ring-purple-500/20 rounded-xl uppercase placeholder:normal-case placeholder:text-slate-400"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRefDialogOpen(false);
+                setRefDialogRow(null);
+                setRefDialogValue("");
+              }}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={saveReference}
+              disabled={updateMutation.isPending}
+              className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl"
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Reference"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
