@@ -1117,7 +1117,7 @@ export default function EnhancedDataTable() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl border-0 rounded-2xl">
+      <Card className="shadow-xl border border-slate-200 rounded-2xl overflow-hidden">
         <div
           className="w-full"
           style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}
@@ -1126,8 +1126,8 @@ export default function EnhancedDataTable() {
             className="w-full border-collapse"
             style={{ minWidth: "1400px" }}
           >
-            <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white">
-              <tr>
+            <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white sticky top-0 z-10">
+              <tr className="border-b-2 border-slate-600">
                 <th className="w-12 px-4 py-5 text-left border-r border-slate-600">
                   <Checkbox
                     checked={
@@ -1199,7 +1199,7 @@ export default function EnhancedDataTable() {
                   <tr
                     key={item.id}
                     className={cn(
-                      "border-b border-slate-200 hover:bg-blue-50/60 transition-colors duration-150",
+                      "border-b border-slate-200 hover:bg-blue-50/80 transition-colors duration-150",
                       getRowColor(index),
                       selectedItems.has(item.id) &&
                         "bg-blue-100/80 hover:bg-blue-100",
