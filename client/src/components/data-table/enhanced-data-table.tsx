@@ -161,7 +161,7 @@ export default function EnhancedDataTable() {
   };
 
   const getRowColor = (index: number) => {
-    return index % 2 === 0 ? "bg-white" : "bg-slate-50/80";
+    return index % 2 === 0 ? "bg-white" : "bg-slate-100/70";
   };
 
   const formatters = useMemo(() => {
@@ -1271,17 +1271,17 @@ export default function EnhancedDataTable() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl border border-slate-200 rounded-2xl overflow-hidden">
+      <Card className="shadow-xl border-2 border-slate-300 rounded-2xl overflow-hidden">
         <div
           className="w-full"
           style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}
         >
           <table
-            className="w-full border-collapse"
+            className="w-full border-collapse table-fixed"
             style={{ minWidth: "1700px" }}
           >
             <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white sticky top-0 z-10">
-              <tr className="border-b-2 border-slate-600">
+              <tr className="border-b-[3px] border-slate-400">
                 <th className="w-12 px-4 py-5 text-left border-r border-slate-600">
                   <Checkbox
                     checked={
@@ -1361,13 +1361,13 @@ export default function EnhancedDataTable() {
                   <tr
                     key={item.id}
                     className={cn(
-                      "border-b border-slate-200 hover:bg-blue-50/80 transition-colors duration-150",
+                      "border-b border-slate-300 hover:bg-blue-50/80 transition-colors duration-150",
                       getRowColor(index),
                       selectedItems.has(item.id) &&
                         "bg-blue-100/80 hover:bg-blue-100",
                     )}
                   >
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-300">
                       <Checkbox
                         checked={selectedItems.has(item.id)}
                         onCheckedChange={(val) =>
@@ -1376,20 +1376,20 @@ export default function EnhancedDataTable() {
                         className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                       />
                     </td>
-                    <td className="px-4 py-4 text-sm font-medium text-slate-700 border-r border-slate-200">
+                    <td className="px-4 py-4 text-sm font-medium text-slate-700 border-r border-slate-300">
                       {formatters.date(item.date)}
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-300">
                       <code className="bg-slate-100 text-slate-800 px-2.5 py-1 rounded-lg text-sm font-mono border border-slate-200">
                         {item.voucher}
                       </code>
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-300">
                       <div className="font-semibold text-slate-900">
                         {item.customer_name || "—"}
                       </div>
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-300">
                       {(item as any).referred_by ? (
                         <div className="flex items-center gap-1.5">
                           <div className="font-semibold text-slate-900 text-sm">
@@ -1423,22 +1423,22 @@ export default function EnhancedDataTable() {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-300">
                       <div className="text-sm bg-blue-50 text-blue-800 px-2.5 py-1.5 rounded-lg border border-blue-100 inline-block">
                         {item.route ? formatters.route(item.route) : "—"}
                       </div>
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-300">
                       <code className="bg-green-50 text-green-800 px-2.5 py-1 rounded-lg text-sm font-mono border border-green-100">
                         {item.pnr || "—"}
                       </code>
                     </td>
-                    <td className="px-4 py-4 text-sm text-slate-700 font-medium border-r border-slate-200">
+                    <td className="px-4 py-4 text-sm text-slate-700 font-medium border-r border-slate-300">
                       {item.flying_date
                         ? formatters.date(item.flying_date)
                         : "—"}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap border-r border-slate-200">
+                    <td className="px-4 py-4 whitespace-nowrap border-r border-slate-300">
                       {flightStatus === FlightStatus.Gone ? (
                         <span className="w-28 h-8 text-sm font-semibold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-lg shadow-sm inline-flex items-center justify-center border border-amber-200">
                           {FlightStatus.Gone}
@@ -1471,7 +1471,7 @@ export default function EnhancedDataTable() {
                         </Select>
                       )}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap border-r border-slate-200">
+                    <td className="px-4 py-4 whitespace-nowrap border-r border-slate-300">
                       <Select
                         value={
                           (item as any).payment_status || PaymentStatus.Pending
@@ -1506,7 +1506,7 @@ export default function EnhancedDataTable() {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-200">
+                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-300">
                       <span
                         className={cn(
                           "font-semibold",
@@ -1516,7 +1516,7 @@ export default function EnhancedDataTable() {
                         {formatters.currency(item.debit)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-200">
+                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-300">
                       <span
                         className={cn(
                           "font-semibold",
@@ -1526,7 +1526,7 @@ export default function EnhancedDataTable() {
                         {formatters.currency(item.credit)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm font-semibold border-r border-slate-200">
+                    <td className="px-4 py-4 text-right font-mono text-sm font-semibold border-r border-slate-300">
                       <span
                         className={cn(
                           item.balance !== undefined && item.balance > 0
@@ -1539,7 +1539,7 @@ export default function EnhancedDataTable() {
                         {formatters.currency(item.balance)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-300">
                       <div className="flex items-center justify-end">
                         <Input
                           type="number"
@@ -1571,7 +1571,7 @@ export default function EnhancedDataTable() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4 border-r border-slate-300">
                       <div className="flex items-center justify-end">
                         <Input
                           type="number"
@@ -1603,7 +1603,7 @@ export default function EnhancedDataTable() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-200">
+                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-300">
                       <span
                         className={cn(
                           "font-bold",
