@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type React from "react";
 
@@ -1388,7 +1388,7 @@ export default function EnhancedDataTable() {
                     </td>
                     <td className="px-4 py-4 border-b border-slate-200">
                       <div className="font-semibold text-slate-900">
-                        {item.customer_name || "â€”"}
+                        {item.customer_name || "—"}
                       </div>
                     </td>
                     <td className="px-4 py-4 border-b border-slate-200">
@@ -1427,18 +1427,18 @@ export default function EnhancedDataTable() {
                     </td>
                     <td className="px-4 py-4 border-b border-slate-200">
                       <div className="text-sm bg-blue-50 text-blue-800 px-2.5 py-1.5 rounded-lg border border-blue-100 inline-block">
-                        {item.route ? formatters.route(item.route) : "â€”"}
+                        {item.route ? formatters.route(item.route) : "—"}
                       </div>
                     </td>
                     <td className="px-4 py-4 border-b border-slate-200">
                       <code className="bg-green-50 text-green-800 px-2.5 py-1 rounded-lg text-sm font-mono border border-green-100">
-                        {item.pnr || "â€”"}
+                        {item.pnr || "—"}
                       </code>
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-700 font-medium border-b border-slate-200">
                       {item.flying_date
                         ? formatters.date(item.flying_date)
-                        : "â€”"}
+                        : "—"}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap border-b border-slate-200">
                       {flightStatus === FlightStatus.Gone ? (
