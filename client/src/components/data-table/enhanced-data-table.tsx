@@ -119,7 +119,9 @@ export default function EnhancedDataTable() {
     selectedCount: 0,
   });
 
-  const updateTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
+  const updateTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {},
+  );
 
   const filteredData = useMemo(() => {
     return filterTravelData(travelData, {
@@ -1281,8 +1283,8 @@ export default function EnhancedDataTable() {
             style={{ minWidth: "1700px" }}
           >
             <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white sticky top-0 z-10">
-              <tr className="border-b-2 border-slate-600">
-                <th className="w-12 px-4 py-5 text-left">
+              <tr>
+                <th className="w-12 px-4 py-5 text-left border-b-2 border-slate-600">
                   <Checkbox
                     checked={
                       selectedItems.size === filteredAndSortedData.length &&
@@ -1292,51 +1294,51 @@ export default function EnhancedDataTable() {
                     className="border-white/50 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                   />
                 </th>
-                <th className="px-4 py-5 text-left min-w-[100px]">
+                <th className="px-4 py-5 text-left min-w-[100px] border-b-2 border-slate-600">
                   <SortButton column="date">Date</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px]">
+                <th className="px-4 py-5 text-left min-w-[120px] border-b-2 border-slate-600">
                   <SortButton column="voucher">Voucher</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[140px]">
+                <th className="px-4 py-5 text-left min-w-[140px] border-b-2 border-slate-600">
                   <SortButton column="customer_name">Customer</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[140px]">
+                <th className="px-4 py-5 text-left min-w-[140px] border-b-2 border-slate-600">
                   <SortButton column="referred_by">Referred By</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px]">
+                <th className="px-4 py-5 text-left min-w-[120px] border-b-2 border-slate-600">
                   <SortButton column="route">Route</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[100px]">
+                <th className="px-4 py-5 text-left min-w-[100px] border-b-2 border-slate-600">
                   <SortButton column="pnr">PNR</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px]">
+                <th className="px-4 py-5 text-left min-w-[120px] border-b-2 border-slate-600">
                   <SortButton column="flying_date">Flying Date</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px]">
+                <th className="px-4 py-5 text-left min-w-[130px] border-b-2 border-slate-600">
                   <SortButton column="flight_status">Flight Status</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[130px]">
+                <th className="px-4 py-5 text-left min-w-[155px] border-b-2 border-slate-600">
                   <SortButton column="payment_status">
                     Payment Status
                   </SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px]">
+                <th className="px-4 py-5 text-right min-w-[100px] border-b-2 border-slate-600">
                   <SortButton column="debit">Debit</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px]">
+                <th className="px-4 py-5 text-right min-w-[100px] border-b-2 border-slate-600">
                   <SortButton column="credit">Credit</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px]">
+                <th className="px-4 py-5 text-right min-w-[100px] border-b-2 border-slate-600">
                   <SortButton column="balance">Balance</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[130px]">
+                <th className="px-4 py-5 text-right min-w-[150px] border-b-2 border-slate-600">
                   <SortButton column="customer_rate">Customer Rate</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[130px]">
+                <th className="px-4 py-5 text-right min-w-[150px] border-b-2 border-slate-600">
                   <SortButton column="company_rate">Company Rate</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px]">
+                <th className="px-4 py-5 text-right min-w-[100px] border-b-2 border-slate-600">
                   <SortButton column="profit">Profit</SortButton>
                 </th>
               </tr>
@@ -1361,13 +1363,13 @@ export default function EnhancedDataTable() {
                   <tr
                     key={item.id}
                     className={cn(
-                      "border-b border-slate-200 hover:bg-blue-50/80 transition-colors duration-150",
+                      "hover:bg-blue-50/80 transition-colors duration-150",
                       getRowColor(index),
                       selectedItems.has(item.id) &&
                         "bg-blue-100/80 hover:bg-blue-100",
                     )}
                   >
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-b border-slate-200">
                       <Checkbox
                         checked={selectedItems.has(item.id)}
                         onCheckedChange={(val) =>
@@ -1376,20 +1378,20 @@ export default function EnhancedDataTable() {
                         className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                       />
                     </td>
-                    <td className="px-4 py-4 text-sm font-medium text-slate-700">
+                    <td className="px-4 py-4 text-sm font-medium text-slate-700 border-b border-slate-200">
                       {formatters.date(item.date)}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-b border-slate-200">
                       <code className="bg-slate-100 text-slate-800 px-2.5 py-1 rounded-lg text-sm font-mono border border-slate-200">
                         {item.voucher}
                       </code>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-b border-slate-200">
                       <div className="font-semibold text-slate-900">
                         {item.customer_name || "â€”"}
                       </div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-b border-slate-200">
                       {(item as any).referred_by ? (
                         <div className="flex items-center gap-1.5">
                           <div className="font-semibold text-slate-900 text-sm">
@@ -1423,22 +1425,22 @@ export default function EnhancedDataTable() {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-b border-slate-200">
                       <div className="text-sm bg-blue-50 text-blue-800 px-2.5 py-1.5 rounded-lg border border-blue-100 inline-block">
                         {item.route ? formatters.route(item.route) : "â€”"}
                       </div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-b border-slate-200">
                       <code className="bg-green-50 text-green-800 px-2.5 py-1 rounded-lg text-sm font-mono border border-green-100">
                         {item.pnr || "â€”"}
                       </code>
                     </td>
-                    <td className="px-4 py-4 text-sm text-slate-700 font-medium">
+                    <td className="px-4 py-4 text-sm text-slate-700 font-medium border-b border-slate-200">
                       {item.flying_date
                         ? formatters.date(item.flying_date)
                         : "â€”"}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap border-b border-slate-200">
                       {flightStatus === FlightStatus.Gone ? (
                         <span className="w-28 h-8 text-sm font-semibold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-lg shadow-sm inline-flex items-center justify-center border border-amber-200">
                           {FlightStatus.Gone}
@@ -1471,7 +1473,7 @@ export default function EnhancedDataTable() {
                         </Select>
                       )}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap border-b border-slate-200">
                       <Select
                         value={
                           (item as any).payment_status || PaymentStatus.Pending
@@ -1506,7 +1508,7 @@ export default function EnhancedDataTable() {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm">
+                    <td className="px-4 py-4 text-right font-mono text-sm border-b border-slate-200">
                       <span
                         className={cn(
                           "font-semibold",
@@ -1516,7 +1518,7 @@ export default function EnhancedDataTable() {
                         {formatters.currency(item.debit)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm">
+                    <td className="px-4 py-4 text-right font-mono text-sm border-b border-slate-200">
                       <span
                         className={cn(
                           "font-semibold",
@@ -1526,7 +1528,7 @@ export default function EnhancedDataTable() {
                         {formatters.currency(item.credit)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm font-semibold">
+                    <td className="px-4 py-4 text-right font-mono text-sm font-semibold border-b border-slate-200">
                       <span
                         className={cn(
                           item.balance !== undefined && item.balance > 0
@@ -1539,7 +1541,7 @@ export default function EnhancedDataTable() {
                         {formatters.currency(item.balance)}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-b border-slate-200">
                       <div className="flex items-center justify-end">
                         <Input
                           type="number"
@@ -1571,7 +1573,7 @@ export default function EnhancedDataTable() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 border-b border-slate-200">
                       <div className="flex items-center justify-end">
                         <Input
                           type="number"
@@ -1603,7 +1605,7 @@ export default function EnhancedDataTable() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm">
+                    <td className="px-4 py-4 text-right font-mono text-sm border-b border-slate-200">
                       <span
                         className={cn(
                           "font-bold",
