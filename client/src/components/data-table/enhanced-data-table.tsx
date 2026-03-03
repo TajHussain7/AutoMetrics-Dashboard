@@ -1282,7 +1282,7 @@ export default function EnhancedDataTable() {
           >
             <thead className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white sticky top-0 z-10">
               <tr className="border-b-2 border-slate-600">
-                <th className="w-12 px-4 py-5 text-left border-r border-slate-600">
+                <th className="w-12 px-4 py-5 text-left">
                   <Checkbox
                     checked={
                       selectedItems.size === filteredAndSortedData.length &&
@@ -1292,51 +1292,51 @@ export default function EnhancedDataTable() {
                     className="border-white/50 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                   />
                 </th>
-                <th className="px-4 py-5 text-left min-w-[100px] border-r border-slate-600">
+                <th className="px-4 py-5 text-left min-w-[100px]">
                   <SortButton column="date">Date</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
+                <th className="px-4 py-5 text-left min-w-[120px]">
                   <SortButton column="voucher">Voucher</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[140px] border-r border-slate-600">
+                <th className="px-4 py-5 text-left min-w-[140px]">
                   <SortButton column="customer_name">Customer</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[140px] border-r border-slate-600">
+                <th className="px-4 py-5 text-left min-w-[140px]">
                   <SortButton column="referred_by">Referred By</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
+                <th className="px-4 py-5 text-left min-w-[120px]">
                   <SortButton column="route">Route</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[100px] border-r border-slate-600">
+                <th className="px-4 py-5 text-left min-w-[100px]">
                   <SortButton column="pnr">PNR</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
+                <th className="px-4 py-5 text-left min-w-[120px]">
                   <SortButton column="flying_date">Flying Date</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[120px] border-r border-slate-600">
+                <th className="px-4 py-5 text-left min-w-[120px]">
                   <SortButton column="flight_status">Flight Status</SortButton>
                 </th>
-                <th className="px-4 py-5 text-left min-w-[130px] border-r border-slate-600">
+                <th className="px-4 py-5 text-left min-w-[130px]">
                   <SortButton column="payment_status">
                     Payment Status
                   </SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px] border-r border-slate-600">
+                <th className="px-4 py-5 text-right min-w-[100px]">
                   <SortButton column="debit">Debit</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px] border-r border-slate-600">
+                <th className="px-4 py-5 text-right min-w-[100px]">
                   <SortButton column="credit">Credit</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px] border-r border-slate-600">
+                <th className="px-4 py-5 text-right min-w-[100px]">
                   <SortButton column="balance">Balance</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[130px] border-r border-slate-600">
+                <th className="px-4 py-5 text-right min-w-[130px]">
                   <SortButton column="customer_rate">Customer Rate</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[130px] border-r border-slate-600">
+                <th className="px-4 py-5 text-right min-w-[130px]">
                   <SortButton column="company_rate">Company Rate</SortButton>
                 </th>
-                <th className="px-4 py-5 text-right min-w-[100px] border-r border-slate-600">
+                <th className="px-4 py-5 text-right min-w-[100px]">
                   <SortButton column="profit">Profit</SortButton>
                 </th>
               </tr>
@@ -1367,7 +1367,7 @@ export default function EnhancedDataTable() {
                         "bg-blue-100/80 hover:bg-blue-100",
                     )}
                   >
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4">
                       <Checkbox
                         checked={selectedItems.has(item.id)}
                         onCheckedChange={(val) =>
@@ -1376,20 +1376,20 @@ export default function EnhancedDataTable() {
                         className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                       />
                     </td>
-                    <td className="px-4 py-4 text-sm font-medium text-slate-700 border-r border-slate-200">
+                    <td className="px-4 py-4 text-sm font-medium text-slate-700">
                       {formatters.date(item.date)}
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4">
                       <code className="bg-slate-100 text-slate-800 px-2.5 py-1 rounded-lg text-sm font-mono border border-slate-200">
                         {item.voucher}
                       </code>
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4">
                       <div className="font-semibold text-slate-900">
-                        {item.customer_name || "—"}
+                        {item.customer_name || "â€”"}
                       </div>
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4">
                       {(item as any).referred_by ? (
                         <div className="flex items-center gap-1.5">
                           <div className="font-semibold text-slate-900 text-sm">
@@ -1423,22 +1423,22 @@ export default function EnhancedDataTable() {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4">
                       <div className="text-sm bg-blue-50 text-blue-800 px-2.5 py-1.5 rounded-lg border border-blue-100 inline-block">
-                        {item.route ? formatters.route(item.route) : "—"}
+                        {item.route ? formatters.route(item.route) : "â€”"}
                       </div>
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4">
                       <code className="bg-green-50 text-green-800 px-2.5 py-1 rounded-lg text-sm font-mono border border-green-100">
-                        {item.pnr || "—"}
+                        {item.pnr || "â€”"}
                       </code>
                     </td>
-                    <td className="px-4 py-4 text-sm text-slate-700 font-medium border-r border-slate-200">
+                    <td className="px-4 py-4 text-sm text-slate-700 font-medium">
                       {item.flying_date
                         ? formatters.date(item.flying_date)
-                        : "—"}
+                        : "â€”"}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap border-r border-slate-200">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       {flightStatus === FlightStatus.Gone ? (
                         <span className="w-28 h-8 text-sm font-semibold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-lg shadow-sm inline-flex items-center justify-center border border-amber-200">
                           {FlightStatus.Gone}
@@ -1471,7 +1471,7 @@ export default function EnhancedDataTable() {
                         </Select>
                       )}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap border-r border-slate-200">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <Select
                         value={
                           (item as any).payment_status || PaymentStatus.Pending
@@ -1506,7 +1506,7 @@ export default function EnhancedDataTable() {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-200">
+                    <td className="px-4 py-4 text-right font-mono text-sm">
                       <span
                         className={cn(
                           "font-semibold",
@@ -1516,7 +1516,7 @@ export default function EnhancedDataTable() {
                         {formatters.currency(item.debit)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-200">
+                    <td className="px-4 py-4 text-right font-mono text-sm">
                       <span
                         className={cn(
                           "font-semibold",
@@ -1526,7 +1526,7 @@ export default function EnhancedDataTable() {
                         {formatters.currency(item.credit)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm font-semibold border-r border-slate-200">
+                    <td className="px-4 py-4 text-right font-mono text-sm font-semibold">
                       <span
                         className={cn(
                           item.balance !== undefined && item.balance > 0
@@ -1539,7 +1539,7 @@ export default function EnhancedDataTable() {
                         {formatters.currency(item.balance)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4">
                       <div className="flex items-center justify-end">
                         <Input
                           type="number"
@@ -1571,7 +1571,7 @@ export default function EnhancedDataTable() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-4 border-r border-slate-200">
+                    <td className="px-4 py-4">
                       <div className="flex items-center justify-end">
                         <Input
                           type="number"
@@ -1603,7 +1603,7 @@ export default function EnhancedDataTable() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-right font-mono text-sm border-r border-slate-200">
+                    <td className="px-4 py-4 text-right font-mono text-sm">
                       <span
                         className={cn(
                           "font-bold",
