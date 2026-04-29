@@ -34,6 +34,9 @@ export const insertTravelDataSchema = z.object({
   company_rate: z.number(),
   profit: z.number(),
   payment_status: z.nativeEnum(PaymentStatus).default(PaymentStatus.Pending),
+  amount_paid: z.number().default(0),
+  amount_pending: z.number().default(0),
+  amount_partial: z.number().default(0),
   user_id: z.string().nullable(),
 });
 
@@ -57,6 +60,9 @@ export const updateTravelDataSchema = z.object({
   company_rate: z.number().optional(),
   profit: z.number().optional(),
   payment_status: z.nativeEnum(PaymentStatus).optional(),
+  amount_paid: z.number().optional(),
+  amount_pending: z.number().optional(),
+  amount_partial: z.number().optional(),
   user_id: z.string().nullable().optional(),
 });
 

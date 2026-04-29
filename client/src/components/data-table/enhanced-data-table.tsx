@@ -119,6 +119,20 @@ export default function EnhancedDataTable() {
     selectedCount: 0,
   });
 
+  // Payment Status Dialog State
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentDialogRow, setPaymentDialogRow] = useState<TravelData | null>(
+    null,
+  );
+  const [paymentStatus, setPaymentStatus] = useState<string>(
+    PaymentStatus.Pending,
+  );
+  const [paymentAmounts, setPaymentAmounts] = useState({
+    amount_paid: 0,
+    amount_pending: 0,
+    amount_partial: 0,
+  });
+
   const updateTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
     {},
   );
@@ -634,6 +648,86 @@ export default function EnhancedDataTable() {
     }
   };
 
+  const openPaymentDialog = (row: TravelData) => {
+    setPaymentDialogRow(row);
+    setPaymentStatus(row.payment_status as string);
+    setPaymentAmounts({
+      amount_paid: (row as any).amount_paid || 0,
+      amount_pending: (row as any).amount_pending || 0,
+      amount_partial: (row as any).amount_partial || 0,
+    });
+    setPaymentDialogOpen(true);
+  };
+
+  const handlePaymentDialogSave = async () => {
+    if (!paymentDialogRow) return;
+
+    try {
+      const mongoId = getMongoId(paymentDialogRow.id);
+
+      const amountPaid = Math.max(
+        0,
+        Number.parseFloat(paymentAmounts.amount_paid?.toString() || "0") || 0,
+      );
+      const amountPending = Math.max(
+        0,
+        Number.parseFloat(paymentAmounts.amount_pending?.toString() || "0") ||
+          0,
+      );
+      const amountPartial = Math.max(
+        0,
+        Number.parseFloat(paymentAmounts.amount_partial?.toString() || "0") ||
+          0,
+      );
+
+      await updateMutation.mutateAsync({
+        id: mongoId,
+        data: {
+          payment_status: paymentStatus as PaymentStatus,
+          amount_paid: amountPaid,
+          amount_pending: amountPending,
+          amount_partial: amountPartial,
+        },
+      });
+
+      // Update context state
+      setTravelData(
+        travelData.map((item) =>
+          item.id === paymentDialogRow.id
+            ? {
+                ...item,
+                payment_status: paymentStatus as PaymentStatus,
+                amount_paid: amountPaid,
+                amount_pending: amountPending,
+                amount_partial: amountPartial,
+              }
+            : item,
+        ),
+      );
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/travel-data"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/travel-data", currentSessionId],
+      });
+
+      toast({
+        title: "Payment Details Updated",
+        description: "Payment status and amounts have been saved.",
+        duration: 2000,
+      });
+
+      setPaymentDialogOpen(false);
+    } catch (error) {
+      errorLogger("Error updating payment details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update payment details. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  };
+
   function AddEntryForm({
     onAdd,
     onCancel,
@@ -655,6 +749,9 @@ export default function EnhancedDataTable() {
       company_rate: "",
       profit: "",
       payment_status: "Pending",
+      amount_paid: "",
+      amount_pending: "",
+      amount_partial: "",
       narration: "",
       reference: "",
       referred_by: "",
@@ -884,6 +981,45 @@ export default function EnhancedDataTable() {
             />
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 block">
+              Amount Paid
+            </label>
+            <Input
+              type="number"
+              placeholder="0.00"
+              value={values.amount_paid}
+              onChange={(e) => set("amount_paid", e.target.value)}
+              className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 block">
+              Amount Pending
+            </label>
+            <Input
+              type="number"
+              placeholder="0.00"
+              value={values.amount_pending}
+              onChange={(e) => set("amount_pending", e.target.value)}
+              className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 block">
+              Amount Partial
+            </label>
+            <Input
+              type="number"
+              placeholder="0.00"
+              value={values.amount_partial}
+              onChange={(e) => set("amount_partial", e.target.value)}
+              className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+            />
+          </div>
+
           <div className="space-y-2 md:col-span-3">
             <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-600 text-xs font-bold">
@@ -1093,6 +1229,15 @@ export default function EnhancedDataTable() {
                           company_rate: companyRate,
                           profit: profit,
                           payment_status: PaymentStatus.Pending,
+                          amount_paid: values.amount_paid
+                            ? Number.parseFloat(values.amount_paid)
+                            : 0,
+                          amount_pending: values.amount_pending
+                            ? Number.parseFloat(values.amount_pending)
+                            : 0,
+                          amount_partial: values.amount_partial
+                            ? Number.parseFloat(values.amount_partial)
+                            : 0,
                           created_at: new Date().toISOString(),
                           updated_at: new Date().toISOString(),
                         } as Omit<TravelDataBase, "id">;
@@ -1474,39 +1619,20 @@ export default function EnhancedDataTable() {
                       )}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap border-b border-slate-200">
-                      <Select
-                        value={
-                          (item as any).payment_status || PaymentStatus.Pending
-                        }
-                        onValueChange={(v: string) =>
-                          handlePaymentStatusChange(item, v)
-                        }
+                      <button
+                        onClick={() => openPaymentDialog(item)}
+                        className={cn(
+                          "w-28 h-8 text-sm font-semibold px-3 py-1 rounded-lg shadow-sm border inline-flex items-center justify-center transition-all hover:shadow-md",
+                          (item as any).payment_status === PaymentStatus.Paid
+                            ? "text-green-800 bg-green-50 border-green-200 hover:bg-green-100"
+                            : (item as any).payment_status ===
+                                PaymentStatus.Partial
+                              ? "text-blue-800 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                              : "text-amber-800 bg-amber-50 border-amber-200 hover:bg-amber-100",
+                        )}
                       >
-                        <SelectTrigger
-                          className={cn(
-                            "w-28 h-8 text-sm font-semibold px-3 py-1 rounded-lg shadow-sm border",
-                            (item as any).payment_status === PaymentStatus.Paid
-                              ? "text-green-800 bg-green-50 border-green-200"
-                              : (item as any).payment_status ===
-                                  PaymentStatus.Partial
-                                ? "text-blue-800 bg-blue-50 border-blue-200"
-                                : "text-amber-800 bg-amber-50 border-amber-200",
-                          )}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                          <SelectItem value={PaymentStatus.Pending}>
-                            {PaymentStatus.Pending}
-                          </SelectItem>
-                          <SelectItem value={PaymentStatus.Partial}>
-                            {PaymentStatus.Partial}
-                          </SelectItem>
-                          <SelectItem value={PaymentStatus.Paid}>
-                            {PaymentStatus.Paid}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {(item as any).payment_status || PaymentStatus.Pending}
+                      </button>
                     </td>
                     <td className="px-4 py-4 text-right font-mono text-sm border-b border-slate-200">
                       <span
@@ -1703,6 +1829,161 @@ export default function EnhancedDataTable() {
               className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl"
             >
               {updateMutation.isPending ? "Saving..." : "Save Reference"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Edit Payment Details</DialogTitle>
+            <DialogDescription>
+              {paymentDialogRow?.customer_name ? (
+                <>
+                  Update payment status and amounts for{" "}
+                  <span className="font-semibold text-slate-800">
+                    {paymentDialogRow.customer_name}
+                  </span>
+                </>
+              ) : (
+                "Update payment status and amounts."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label
+                htmlFor="payment-status"
+                className="text-sm font-medium text-slate-700"
+              >
+                Payment Status
+              </Label>
+              <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+                <SelectTrigger
+                  id="payment-status"
+                  className="bg-white border-slate-200 rounded-xl"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value={PaymentStatus.Pending}>
+                    {PaymentStatus.Pending}
+                  </SelectItem>
+                  <SelectItem value={PaymentStatus.Partial}>
+                    {PaymentStatus.Partial}
+                  </SelectItem>
+                  <SelectItem value={PaymentStatus.Paid}>
+                    {PaymentStatus.Paid}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="amount-paid"
+                className="text-sm font-medium text-slate-700"
+              >
+                Amount Paid
+              </Label>
+              <Input
+                id="amount-paid"
+                type="number"
+                step="0.01"
+                min="0"
+                value={paymentAmounts.amount_paid || ""}
+                onChange={(e) =>
+                  setPaymentAmounts((prev) => ({
+                    ...prev,
+                    amount_paid: Number.parseFloat(e.target.value) || 0,
+                  }))
+                }
+                placeholder="0.00"
+                className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="amount-pending"
+                className="text-sm font-medium text-slate-700"
+              >
+                Amount Pending
+              </Label>
+              <Input
+                id="amount-pending"
+                type="number"
+                step="0.01"
+                min="0"
+                value={paymentAmounts.amount_pending || ""}
+                onChange={(e) =>
+                  setPaymentAmounts((prev) => ({
+                    ...prev,
+                    amount_pending: Number.parseFloat(e.target.value) || 0,
+                  }))
+                }
+                placeholder="0.00"
+                className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="amount-partial"
+                className="text-sm font-medium text-slate-700"
+              >
+                Amount Partial
+              </Label>
+              <Input
+                id="amount-partial"
+                type="number"
+                step="0.01"
+                min="0"
+                value={paymentAmounts.amount_partial || ""}
+                onChange={(e) =>
+                  setPaymentAmounts((prev) => ({
+                    ...prev,
+                    amount_partial: Number.parseFloat(e.target.value) || 0,
+                  }))
+                }
+                placeholder="0.00"
+                className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+              />
+            </div>
+
+            <div className="rounded-lg bg-slate-50 p-3 border border-slate-200">
+              <div className="text-sm font-semibold text-slate-700 mb-2">
+                Total Amount
+              </div>
+              <div className="text-lg font-bold text-slate-900">
+                {new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                }).format(
+                  (paymentAmounts.amount_paid || 0) +
+                    (paymentAmounts.amount_pending || 0) +
+                    (paymentAmounts.amount_partial || 0),
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPaymentDialogOpen(false)}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handlePaymentDialogSave}
+              disabled={updateMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

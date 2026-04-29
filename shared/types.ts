@@ -41,6 +41,9 @@ export interface TravelDataBase extends BaseEntity {
   company_rate: number;
   profit: number;
   payment_status: PaymentStatus;
+  amount_paid: number;
+  amount_pending: number;
+  amount_partial: number;
   // user_id may be missing for local/in-memory entries; treat as optional
   user_id?: string | null;
 }
