@@ -151,10 +151,6 @@ export default function ChartsGrid() {
       (sum, item) => sum + (Number((item as any).amount_paid) || 0),
       0,
     ),
-    partial: travelData.reduce(
-      (sum, item) => sum + (Number((item as any).amount_partial) || 0),
-      0,
-    ),
     pending: travelData.reduce(
       (sum, item) => sum + (Number((item as any).amount_pending) || 0),
       0,
@@ -162,7 +158,8 @@ export default function ChartsGrid() {
   };
 
   const totalPaymentAmount =
-    paymentAmountsByStatus.paid +
+    paymentAmountsByStatus.paid + paymentAmountsByStatus.pending;
+  paymentAmountsByStatus.paid +
     paymentAmountsByStatus.partial +
     paymentAmountsByStatus.pending;
 
@@ -811,36 +808,6 @@ export default function ChartsGrid() {
 
         <motion.div variants={itemVariants}>
           <Card className="h-full rounded-2xl border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-            <CardContent className="p-4 md:p-6 relative">
-              <div className="text-sm font-semibold text-slate-700 mb-3">
-                Amount Partial
-              </div>
-              <div className="text-3xl font-bold text-blue-600 mb-2">
-                ${paymentAmountsByStatus.partial.toFixed(2)}
-              </div>
-              <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 transition-all duration-300"
-                  style={{
-                    width:
-                      totalPaymentAmount > 0
-                        ? `${(paymentAmountsByStatus.partial / totalPaymentAmount) * 100}%`
-                        : "0%",
-                  }}
-                />
-              </div>
-              <div className="text-xs text-slate-500 mt-2">
-                {totalPaymentAmount > 0
-                  ? `${((paymentAmountsByStatus.partial / totalPaymentAmount) * 100).toFixed(1)}% of Total`
-                  : "No partial payments"}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="h-full rounded-2xl border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
             <CardContent className="p-4 md:p-6 relative">
               <div className="text-sm font-semibold text-slate-700 mb-3">
@@ -876,21 +843,13 @@ export default function ChartsGrid() {
               <div className="text-sm font-semibold text-slate-700 mb-4">
                 Total Payment Tracking
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                   <div className="text-xs font-medium text-green-700 mb-1">
                     Amount Paid
                   </div>
                   <div className="text-2xl font-bold text-green-600">
                     ${paymentAmountsByStatus.paid.toFixed(2)}
-                  </div>
-                </div>
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <div className="text-xs font-medium text-blue-700 mb-1">
-                    Amount Partial
-                  </div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    ${paymentAmountsByStatus.partial.toFixed(2)}
                   </div>
                 </div>
                 <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">

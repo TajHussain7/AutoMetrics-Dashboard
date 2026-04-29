@@ -130,70 +130,44 @@ export default function EnhancedDataTable() {
   const [paymentAmounts, setPaymentAmounts] = useState({
     amount_paid: 0,
     amount_pending: 0,
-    amount_partial: 0,
   });
   const [totalAmount, setTotalAmount] = useState(0);
 
-  // Calculate total amount from individual amounts
-  const calculateTotal = (paid: number, pending: number, partial: number) => {
-    return Math.max(0, paid + pending + partial);
+  // Calculate total amount from paid and pending amounts
+  const calculateTotal = (paid: number, pending: number) => {
+    return Math.max(0, paid + pending);
   };
 
   // Handle total amount change - set pending to remaining amount
   const handleTotalAmountChange = (newTotal: number) => {
     const total = Math.max(0, newTotal);
     setTotalAmount(total);
-    const remaining = Math.max(
-      0,
-      total - paymentAmounts.amount_paid - paymentAmounts.amount_partial,
-    );
+    const remaining = Math.max(0, total - paymentAmounts.amount_paid);
     setPaymentAmounts((prev) => ({
       ...prev,
       amount_pending: remaining,
     }));
   };
 
-  // Handle individual amount changes - auto-update pending to maintain total
+  // Handle paid amount change - auto-update pending to maintain total
   const handleAmountPaidChange = (newPaid: number) => {
     const paid = Math.max(0, newPaid);
+    const capped = Math.min(paid, totalAmount); // Don't let paid exceed total
     setPaymentAmounts((prev) => ({
       ...prev,
-      amount_paid: paid,
+      amount_paid: capped,
+      amount_pending: Math.max(0, totalAmount - capped),
     }));
-    const currentTotal = calculateTotal(
-      paid,
-      paymentAmounts.amount_pending,
-      paymentAmounts.amount_partial,
-    );
-    setTotalAmount(currentTotal);
-  };
-
-  const handleAmountPartialChange = (newPartial: number) => {
-    const partial = Math.max(0, newPartial);
-    setPaymentAmounts((prev) => ({
-      ...prev,
-      amount_partial: partial,
-    }));
-    const currentTotal = calculateTotal(
-      paymentAmounts.amount_paid,
-      paymentAmounts.amount_pending,
-      partial,
-    );
-    setTotalAmount(currentTotal);
   };
 
   const handleAmountPendingChange = (newPending: number) => {
     const pending = Math.max(0, newPending);
+    const capped = Math.min(pending, totalAmount); // Don't let pending exceed total
     setPaymentAmounts((prev) => ({
       ...prev,
-      amount_pending: pending,
+      amount_pending: capped,
+      amount_paid: Math.max(0, totalAmount - capped),
     }));
-    const currentTotal = calculateTotal(
-      paymentAmounts.amount_paid,
-      pending,
-      paymentAmounts.amount_partial,
-    );
-    setTotalAmount(currentTotal);
   };
 
   const updateTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
@@ -716,13 +690,11 @@ export default function EnhancedDataTable() {
     setPaymentStatus(row.payment_status as string);
     const paid = (row as any).amount_paid || 0;
     const pending = (row as any).amount_pending || 0;
-    const partial = (row as any).amount_partial || 0;
     setPaymentAmounts({
       amount_paid: paid,
       amount_pending: pending,
-      amount_partial: partial,
     });
-    setTotalAmount(calculateTotal(paid, pending, partial));
+    setTotalAmount(calculateTotal(paid, pending));
     setPaymentDialogOpen(true);
   };
 
@@ -741,11 +713,6 @@ export default function EnhancedDataTable() {
         Number.parseFloat(paymentAmounts.amount_pending?.toString() || "0") ||
           0,
       );
-      const amountPartial = Math.max(
-        0,
-        Number.parseFloat(paymentAmounts.amount_partial?.toString() || "0") ||
-          0,
-      );
 
       await updateMutation.mutateAsync({
         id: mongoId,
@@ -753,7 +720,6 @@ export default function EnhancedDataTable() {
           payment_status: paymentStatus as PaymentStatus,
           amount_paid: amountPaid,
           amount_pending: amountPending,
-          amount_partial: amountPartial,
         },
       });
 
@@ -766,7 +732,6 @@ export default function EnhancedDataTable() {
                 payment_status: paymentStatus as PaymentStatus,
                 amount_paid: amountPaid,
                 amount_pending: amountPending,
-                amount_partial: amountPartial,
               }
             : item,
         ),
@@ -1689,32 +1654,29 @@ export default function EnhancedDataTable() {
                       <button
                         onClick={() => openPaymentDialog(item)}
                         className={cn(
-                          "px-3 py-2 rounded-lg shadow-sm border inline-flex items-center justify-between gap-2 transition-all hover:shadow-md flex-col text-center min-w-max",
+                          "px-3 py-2 rounded-lg shadow-sm border transition-all hover:shadow-md text-center min-w-max",
                           (item as any).payment_status === PaymentStatus.Paid
                             ? "text-green-800 bg-green-50 border-green-200 hover:bg-green-100"
-                            : (item as any).payment_status ===
-                                PaymentStatus.Partial
-                              ? "text-blue-800 bg-blue-50 border-blue-200 hover:bg-blue-100"
-                              : "text-amber-800 bg-amber-50 border-amber-200 hover:bg-amber-100",
+                            : "text-amber-800 bg-amber-50 border-amber-200 hover:bg-amber-100",
                         )}
                         title="Click to edit payment details"
                       >
-                        <span className="text-sm font-semibold">
-                          {(item as any).payment_status ||
-                            PaymentStatus.Pending}
-                        </span>
-                        {(item as any).amount_paid ||
-                        (item as any).amount_pending ||
-                        (item as any).amount_partial ? (
-                          <span className="text-xs opacity-75">
-                            $
-                            {(
-                              ((item as any).amount_paid || 0) +
-                              ((item as any).amount_pending || 0) +
-                              ((item as any).amount_partial || 0)
-                            ).toFixed(2)}
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-semibold">
+                            {(item as any).payment_status ||
+                              PaymentStatus.Pending}
                           </span>
-                        ) : null}
+                          {(item as any).amount_paid ||
+                          (item as any).amount_pending ? (
+                            <span className="text-xs opacity-75">
+                              $
+                              {(
+                                ((item as any).amount_paid || 0) +
+                                ((item as any).amount_pending || 0)
+                              ).toFixed(2)}
+                            </span>
+                          ) : null}
+                        </div>
                       </button>
                     </td>
                     <td className="px-4 py-4 text-right font-mono text-sm border-b border-slate-200">
@@ -1918,7 +1880,7 @@ export default function EnhancedDataTable() {
       </Dialog>
 
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg">Edit Payment Details</DialogTitle>
             <DialogDescription>
@@ -1952,9 +1914,6 @@ export default function EnhancedDataTable() {
                 <SelectContent className="rounded-xl">
                   <SelectItem value={PaymentStatus.Pending}>
                     {PaymentStatus.Pending}
-                  </SelectItem>
-                  <SelectItem value={PaymentStatus.Partial}>
-                    {PaymentStatus.Partial}
                   </SelectItem>
                   <SelectItem value={PaymentStatus.Paid}>
                     {PaymentStatus.Paid}
@@ -2013,29 +1972,6 @@ export default function EnhancedDataTable() {
 
             <div className="space-y-2">
               <Label
-                htmlFor="amount-partial"
-                className="text-sm font-medium text-slate-700"
-              >
-                Amount Partial
-              </Label>
-              <Input
-                id="amount-partial"
-                type="number"
-                step="0.01"
-                min="0"
-                value={paymentAmounts.amount_partial || ""}
-                onChange={(e) =>
-                  handleAmountPartialChange(
-                    Number.parseFloat(e.target.value) || 0,
-                  )
-                }
-                placeholder="0.00"
-                className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label
                 htmlFor="amount-pending"
                 className="text-sm font-medium text-slate-700"
               >
@@ -2085,13 +2021,6 @@ export default function EnhancedDataTable() {
                         style: "currency",
                         currency: "USD",
                       }).format(paymentAmounts.amount_paid || 0)}
-                    </div>
-                    <div className="text-blue-700">
-                      Partial:{" "}
-                      {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: "USD",
-                      }).format(paymentAmounts.amount_partial || 0)}
                     </div>
                     <div className="text-amber-700">
                       Pending:{" "}

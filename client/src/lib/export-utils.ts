@@ -146,16 +146,14 @@ export async function exportToExcel(
         Profit: item.profit || 0,
         "Payment Status": item.payment_status || "",
         "Amount Paid": (item as any).amount_paid || 0,
-        "Amount Partial": (item as any).amount_partial || 0,
         "Amount Pending": (item as any).amount_pending || 0,
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(tableData);
 
-      // Set column widths (increased to accommodate new payment amount columns)
+      // Set column widths
       const colWidths = [
         12, 12, 14, 20, 12, 12, 12, 18, 14, 12, 14, 14, 14, 14, 12, 16, 14, 14,
-        14,
       ];
       worksheet["!cols"] = colWidths.map((w) => ({ wch: w }));
 
@@ -185,7 +183,6 @@ export async function exportToExcel(
               "Company Rate",
               "Profit",
               "Amount Paid",
-              "Amount Partial",
               "Amount Pending",
             ].includes(header)
           ) {
