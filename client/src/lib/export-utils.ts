@@ -91,7 +91,7 @@ const statusStyleMap: Record<string, CellStyle> = {
 export async function exportToExcel(
   data: TravelData[],
   options: ExportOptions,
-  filename?: string
+  filename?: string,
 ): Promise<void> {
   try {
     const XLSX = (await import("xlsx")) as typeof import("xlsx");
@@ -117,7 +117,7 @@ export async function exportToExcel(
       const targetStatus = statusMap[options.statusFilter];
       if (targetStatus) {
         filteredData = filteredData.filter(
-          (item) => getFlightStatus(item) === targetStatus
+          (item) => getFlightStatus(item) === targetStatus,
         );
       }
     }
@@ -145,13 +145,17 @@ export async function exportToExcel(
         "Company Rate": item.company_rate || 0,
         Profit: item.profit || 0,
         "Payment Status": item.payment_status || "",
+        "Amount Paid": (item as any).amount_paid || 0,
+        "Amount Partial": (item as any).amount_partial || 0,
+        "Amount Pending": (item as any).amount_pending || 0,
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(tableData);
 
-      // Set column widths
+      // Set column widths (increased to accommodate new payment amount columns)
       const colWidths = [
-        12, 12, 14, 20, 12, 12, 12, 18, 14, 12, 14, 14, 14, 14, 12, 16,
+        12, 12, 14, 20, 12, 12, 12, 18, 14, 12, 14, 14, 14, 14, 12, 16, 14, 14,
+        14,
       ];
       worksheet["!cols"] = colWidths.map((w) => ({ wch: w }));
 
@@ -180,6 +184,9 @@ export async function exportToExcel(
               "Customer Rate",
               "Company Rate",
               "Profit",
+              "Amount Paid",
+              "Amount Partial",
+              "Amount Pending",
             ].includes(header)
           ) {
             worksheet[cellRef].s = {
@@ -212,11 +219,11 @@ export async function exportToExcel(
       const totalBookings = filteredData.length;
       const totalRevenue = filteredData.reduce(
         (sum, item) => sum + (item.debit || 0),
-        0
+        0,
       );
       const totalProfit = filteredData.reduce(
         (sum, item) => sum + (item.profit || 0),
-        0
+        0,
       );
       const profitMargin =
         totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
@@ -316,7 +323,7 @@ export async function exportToExcel(
 export async function exportToPDF(
   elementId: string,
   options: ExportOptions,
-  filename?: string
+  filename?: string,
 ): Promise<void> {
   try {
     const element = document.getElementById(elementId);
@@ -360,7 +367,7 @@ export async function exportToPDF(
       pdf.text(
         `Date Range: ${options.dateRange.start} to ${options.dateRange.end}`,
         20,
-        55
+        55,
       );
     }
 
@@ -415,7 +422,7 @@ export interface ExportHistory {
 }
 
 export function saveExportHistory(
-  export_: Omit<ExportHistory, "id" | "exportedAt">
+  export_: Omit<ExportHistory, "id" | "exportedAt">,
 ): void {
   const history = getExportHistory();
   const newExport: ExportHistory = {
@@ -431,7 +438,7 @@ export function saveExportHistory(
 
   sessionStorage.setItem(
     "tajmetrics_export_history",
-    JSON.stringify(trimmedHistory)
+    JSON.stringify(trimmedHistory),
   );
 }
 

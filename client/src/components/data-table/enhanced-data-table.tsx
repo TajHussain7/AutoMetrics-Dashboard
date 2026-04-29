@@ -132,6 +132,69 @@ export default function EnhancedDataTable() {
     amount_pending: 0,
     amount_partial: 0,
   });
+  const [totalAmount, setTotalAmount] = useState(0);
+
+  // Calculate total amount from individual amounts
+  const calculateTotal = (paid: number, pending: number, partial: number) => {
+    return Math.max(0, paid + pending + partial);
+  };
+
+  // Handle total amount change - set pending to remaining amount
+  const handleTotalAmountChange = (newTotal: number) => {
+    const total = Math.max(0, newTotal);
+    setTotalAmount(total);
+    const remaining = Math.max(
+      0,
+      total - paymentAmounts.amount_paid - paymentAmounts.amount_partial,
+    );
+    setPaymentAmounts((prev) => ({
+      ...prev,
+      amount_pending: remaining,
+    }));
+  };
+
+  // Handle individual amount changes - auto-update pending to maintain total
+  const handleAmountPaidChange = (newPaid: number) => {
+    const paid = Math.max(0, newPaid);
+    setPaymentAmounts((prev) => ({
+      ...prev,
+      amount_paid: paid,
+    }));
+    const currentTotal = calculateTotal(
+      paid,
+      paymentAmounts.amount_pending,
+      paymentAmounts.amount_partial,
+    );
+    setTotalAmount(currentTotal);
+  };
+
+  const handleAmountPartialChange = (newPartial: number) => {
+    const partial = Math.max(0, newPartial);
+    setPaymentAmounts((prev) => ({
+      ...prev,
+      amount_partial: partial,
+    }));
+    const currentTotal = calculateTotal(
+      paymentAmounts.amount_paid,
+      paymentAmounts.amount_pending,
+      partial,
+    );
+    setTotalAmount(currentTotal);
+  };
+
+  const handleAmountPendingChange = (newPending: number) => {
+    const pending = Math.max(0, newPending);
+    setPaymentAmounts((prev) => ({
+      ...prev,
+      amount_pending: pending,
+    }));
+    const currentTotal = calculateTotal(
+      paymentAmounts.amount_paid,
+      pending,
+      paymentAmounts.amount_partial,
+    );
+    setTotalAmount(currentTotal);
+  };
 
   const updateTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
     {},
@@ -651,11 +714,15 @@ export default function EnhancedDataTable() {
   const openPaymentDialog = (row: TravelData) => {
     setPaymentDialogRow(row);
     setPaymentStatus(row.payment_status as string);
+    const paid = (row as any).amount_paid || 0;
+    const pending = (row as any).amount_pending || 0;
+    const partial = (row as any).amount_partial || 0;
     setPaymentAmounts({
-      amount_paid: (row as any).amount_paid || 0,
-      amount_pending: (row as any).amount_pending || 0,
-      amount_partial: (row as any).amount_partial || 0,
+      amount_paid: paid,
+      amount_pending: pending,
+      amount_partial: partial,
     });
+    setTotalAmount(calculateTotal(paid, pending, partial));
     setPaymentDialogOpen(true);
   };
 
@@ -1622,7 +1689,7 @@ export default function EnhancedDataTable() {
                       <button
                         onClick={() => openPaymentDialog(item)}
                         className={cn(
-                          "w-28 h-8 text-sm font-semibold px-3 py-1 rounded-lg shadow-sm border inline-flex items-center justify-center transition-all hover:shadow-md",
+                          "px-3 py-2 rounded-lg shadow-sm border inline-flex items-center justify-between gap-2 transition-all hover:shadow-md flex-col text-center min-w-max",
                           (item as any).payment_status === PaymentStatus.Paid
                             ? "text-green-800 bg-green-50 border-green-200 hover:bg-green-100"
                             : (item as any).payment_status ===
@@ -1630,8 +1697,24 @@ export default function EnhancedDataTable() {
                               ? "text-blue-800 bg-blue-50 border-blue-200 hover:bg-blue-100"
                               : "text-amber-800 bg-amber-50 border-amber-200 hover:bg-amber-100",
                         )}
+                        title="Click to edit payment details"
                       >
-                        {(item as any).payment_status || PaymentStatus.Pending}
+                        <span className="text-sm font-semibold">
+                          {(item as any).payment_status ||
+                            PaymentStatus.Pending}
+                        </span>
+                        {(item as any).amount_paid ||
+                        (item as any).amount_pending ||
+                        (item as any).amount_partial ? (
+                          <span className="text-xs opacity-75">
+                            $
+                            {(
+                              ((item as any).amount_paid || 0) +
+                              ((item as any).amount_pending || 0) +
+                              ((item as any).amount_partial || 0)
+                            ).toFixed(2)}
+                          </span>
+                        ) : null}
                       </button>
                     </td>
                     <td className="px-4 py-4 text-right font-mono text-sm border-b border-slate-200">
@@ -1882,6 +1965,33 @@ export default function EnhancedDataTable() {
 
             <div className="space-y-2">
               <Label
+                htmlFor="total-amount"
+                className="text-sm font-medium text-slate-700"
+              >
+                Total Amount
+              </Label>
+              <Input
+                id="total-amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={totalAmount || ""}
+                onChange={(e) =>
+                  handleTotalAmountChange(
+                    Number.parseFloat(e.target.value) || 0,
+                  )
+                }
+                placeholder="0.00"
+                className="bg-white border-slate-200 hover:border-green-400 focus:border-green-500 focus:ring-green-500/20 rounded-xl font-semibold"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Enter total amount. Pending will auto-update to fill the
+                remaining balance.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label
                 htmlFor="amount-paid"
                 className="text-sm font-medium text-slate-700"
               >
@@ -1894,37 +2004,10 @@ export default function EnhancedDataTable() {
                 min="0"
                 value={paymentAmounts.amount_paid || ""}
                 onChange={(e) =>
-                  setPaymentAmounts((prev) => ({
-                    ...prev,
-                    amount_paid: Number.parseFloat(e.target.value) || 0,
-                  }))
+                  handleAmountPaidChange(Number.parseFloat(e.target.value) || 0)
                 }
                 placeholder="0.00"
-                className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="amount-pending"
-                className="text-sm font-medium text-slate-700"
-              >
-                Amount Pending
-              </Label>
-              <Input
-                id="amount-pending"
-                type="number"
-                step="0.01"
-                min="0"
-                value={paymentAmounts.amount_pending || ""}
-                onChange={(e) =>
-                  setPaymentAmounts((prev) => ({
-                    ...prev,
-                    amount_pending: Number.parseFloat(e.target.value) || 0,
-                  }))
-                }
-                placeholder="0.00"
-                className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+                className="bg-white border-slate-200 hover:border-green-400 focus:border-green-500 focus:ring-green-500/20 rounded-xl"
               />
             </div>
 
@@ -1942,29 +2025,83 @@ export default function EnhancedDataTable() {
                 min="0"
                 value={paymentAmounts.amount_partial || ""}
                 onChange={(e) =>
-                  setPaymentAmounts((prev) => ({
-                    ...prev,
-                    amount_partial: Number.parseFloat(e.target.value) || 0,
-                  }))
+                  handleAmountPartialChange(
+                    Number.parseFloat(e.target.value) || 0,
+                  )
                 }
                 placeholder="0.00"
                 className="bg-white border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
               />
             </div>
 
-            <div className="rounded-lg bg-slate-50 p-3 border border-slate-200">
-              <div className="text-sm font-semibold text-slate-700 mb-2">
-                Total Amount
-              </div>
-              <div className="text-lg font-bold text-slate-900">
-                {new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                }).format(
-                  (paymentAmounts.amount_paid || 0) +
-                    (paymentAmounts.amount_pending || 0) +
-                    (paymentAmounts.amount_partial || 0),
-                )}
+            <div className="space-y-2">
+              <Label
+                htmlFor="amount-pending"
+                className="text-sm font-medium text-slate-700"
+              >
+                Amount Pending{" "}
+                <span className="text-amber-600">(Auto-calculated)</span>
+              </Label>
+              <Input
+                id="amount-pending"
+                type="number"
+                step="0.01"
+                min="0"
+                value={paymentAmounts.amount_pending || ""}
+                onChange={(e) =>
+                  handleAmountPendingChange(
+                    Number.parseFloat(e.target.value) || 0,
+                  )
+                }
+                placeholder="0.00"
+                className="bg-slate-100 border-slate-200 rounded-xl text-slate-600"
+              />
+              <p className="text-xs text-amber-600">
+                Auto-updates when Total or other amounts change
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-gradient-to-r from-slate-50 to-blue-50 p-4 border border-slate-200">
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="text-sm font-semibold text-slate-700 mb-1">
+                    Total Amount
+                  </div>
+                  <div className="text-2xl font-bold text-slate-900">
+                    {new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                    }).format(totalAmount || 0)}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-medium text-slate-600 mb-2">
+                    Breakdown:
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div className="text-green-700">
+                      Paid:{" "}
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                      }).format(paymentAmounts.amount_paid || 0)}
+                    </div>
+                    <div className="text-blue-700">
+                      Partial:{" "}
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                      }).format(paymentAmounts.amount_partial || 0)}
+                    </div>
+                    <div className="text-amber-700">
+                      Pending:{" "}
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                      }).format(paymentAmounts.amount_pending || 0)}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -66,7 +66,7 @@ export default function ChartsGrid() {
     .map((item) => ({
       pnr: item.pnr || "N/A",
       profit: Number.parseFloat(
-        (item.profit?.toString() || "0").replace(/,/g, "")
+        (item.profit?.toString() || "0").replace(/,/g, ""),
       ),
       customer_name: item.customer_name || "Unknown",
     }))
@@ -78,7 +78,7 @@ export default function ChartsGrid() {
     .map((item) => ({
       pnr: item.pnr || "N/A",
       profit: Number.parseFloat(
-        (item.profit?.toString() || "0").replace(/,/g, "")
+        (item.profit?.toString() || "0").replace(/,/g, ""),
       ),
       customer_name: item.customer_name || "Unknown",
     }))
@@ -144,6 +144,27 @@ export default function ChartsGrid() {
       color: COLORS.red,
     },
   ];
+
+  // Calculate payment amounts by status
+  const paymentAmountsByStatus = {
+    paid: travelData.reduce(
+      (sum, item) => sum + (Number((item as any).amount_paid) || 0),
+      0,
+    ),
+    partial: travelData.reduce(
+      (sum, item) => sum + (Number((item as any).amount_partial) || 0),
+      0,
+    ),
+    pending: travelData.reduce(
+      (sum, item) => sum + (Number((item as any).amount_pending) || 0),
+      0,
+    ),
+  };
+
+  const totalPaymentAmount =
+    paymentAmountsByStatus.paid +
+    paymentAmountsByStatus.partial +
+    paymentAmountsByStatus.pending;
 
   return (
     <motion.div
@@ -397,7 +418,7 @@ export default function ChartsGrid() {
                       domain={[
                         (dataMin: number) => {
                           const profits = (profitData || []).map((d: any) =>
-                            Number(d.profit || 0)
+                            Number(d.profit || 0),
                           );
                           if (profits.length === 0) return 0;
                           const min = Math.min(...profits);
@@ -408,7 +429,7 @@ export default function ChartsGrid() {
                         },
                         (dataMax: number) => {
                           const profits = (profitData || []).map((d: any) =>
-                            Number(d.profit || 0)
+                            Number(d.profit || 0),
                           );
                           if (profits.length === 0) return dataMax;
                           const max = Math.max(...profits);
@@ -487,8 +508,8 @@ export default function ChartsGrid() {
                           p >= midCut
                             ? COLORS.green
                             : p >= lowCut
-                            ? COLORS.orange
-                            : COLORS.red;
+                              ? COLORS.orange
+                              : COLORS.red;
                         const r = radiusFor(p);
 
                         return (
@@ -612,7 +633,7 @@ export default function ChartsGrid() {
                       domain={[
                         (dataMin: number) => {
                           const losses = (lossData || []).map((d: any) =>
-                            Number(d.profit || 0)
+                            Number(d.profit || 0),
                           );
                           if (losses.length === 0) return dataMin;
                           const min = Math.min(...losses); // should be negative
@@ -623,7 +644,7 @@ export default function ChartsGrid() {
                         },
                         (dataMax: number) => {
                           const losses = (lossData || []).map((d: any) =>
-                            Number(d.profit || 0)
+                            Number(d.profit || 0),
                           );
                           if (losses.length === 0) return dataMax;
                           const max = Math.max(...losses);
@@ -701,8 +722,8 @@ export default function ChartsGrid() {
                           loss >= midCut
                             ? "#991b1b" // dark red
                             : loss >= lowCut
-                            ? "#dc2626" // medium red
-                            : "#ef4444"; // lighter red
+                              ? "#dc2626" // medium red
+                              : "#ef4444"; // lighter red
                         const r = radiusFor(loss);
 
                         return (
@@ -752,6 +773,144 @@ export default function ChartsGrid() {
                     })()}
                   </ScatterChart>
                 </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Payment Tracking Summary Cards */}
+        <motion.div variants={itemVariants}>
+          <Card className="h-full rounded-2xl border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <CardContent className="p-4 md:p-6 relative">
+              <div className="text-sm font-semibold text-slate-700 mb-3">
+                Amount Paid
+              </div>
+              <div className="text-3xl font-bold text-green-600 mb-2">
+                ${paymentAmountsByStatus.paid.toFixed(2)}
+              </div>
+              <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 transition-all duration-300"
+                  style={{
+                    width:
+                      totalPaymentAmount > 0
+                        ? `${(paymentAmountsByStatus.paid / totalPaymentAmount) * 100}%`
+                        : "0%",
+                  }}
+                />
+              </div>
+              <div className="text-xs text-slate-500 mt-2">
+                {totalPaymentAmount > 0
+                  ? `${((paymentAmountsByStatus.paid / totalPaymentAmount) * 100).toFixed(1)}% of Total`
+                  : "No payments"}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="h-full rounded-2xl border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <CardContent className="p-4 md:p-6 relative">
+              <div className="text-sm font-semibold text-slate-700 mb-3">
+                Amount Partial
+              </div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">
+                ${paymentAmountsByStatus.partial.toFixed(2)}
+              </div>
+              <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 transition-all duration-300"
+                  style={{
+                    width:
+                      totalPaymentAmount > 0
+                        ? `${(paymentAmountsByStatus.partial / totalPaymentAmount) * 100}%`
+                        : "0%",
+                  }}
+                />
+              </div>
+              <div className="text-xs text-slate-500 mt-2">
+                {totalPaymentAmount > 0
+                  ? `${((paymentAmountsByStatus.partial / totalPaymentAmount) * 100).toFixed(1)}% of Total`
+                  : "No partial payments"}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="h-full rounded-2xl border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <CardContent className="p-4 md:p-6 relative">
+              <div className="text-sm font-semibold text-slate-700 mb-3">
+                Amount Pending
+              </div>
+              <div className="text-3xl font-bold text-amber-600 mb-2">
+                ${paymentAmountsByStatus.pending.toFixed(2)}
+              </div>
+              <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-500 transition-all duration-300"
+                  style={{
+                    width:
+                      totalPaymentAmount > 0
+                        ? `${(paymentAmountsByStatus.pending / totalPaymentAmount) * 100}%`
+                        : "0%",
+                  }}
+                />
+              </div>
+              <div className="text-xs text-slate-500 mt-2">
+                {totalPaymentAmount > 0
+                  ? `${((paymentAmountsByStatus.pending / totalPaymentAmount) * 100).toFixed(1)}% of Total`
+                  : "No pending payments"}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="lg:col-span-3">
+          <Card className="rounded-2xl border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <CardContent className="p-4 md:p-6 relative">
+              <div className="text-sm font-semibold text-slate-700 mb-4">
+                Total Payment Tracking
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <div className="text-xs font-medium text-green-700 mb-1">
+                    Amount Paid
+                  </div>
+                  <div className="text-2xl font-bold text-green-600">
+                    ${paymentAmountsByStatus.paid.toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <div className="text-xs font-medium text-blue-700 mb-1">
+                    Amount Partial
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    ${paymentAmountsByStatus.partial.toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                  <div className="text-xs font-medium text-amber-700 mb-1">
+                    Amount Pending
+                  </div>
+                  <div className="text-2xl font-bold text-amber-600">
+                    ${paymentAmountsByStatus.pending.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-slate-700">
+                    Total Payment Amount
+                  </span>
+                  <span className="text-2xl font-bold text-slate-900">
+                    ${totalPaymentAmount.toFixed(2)}
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
